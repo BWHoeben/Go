@@ -10,6 +10,7 @@ import java.util.Set;
 
 public class Board {
 
+	// Instance variables
 	private final int dimension;
 	private Map<Integer, Intersection> intersections;
 	private List<Group> groups;
@@ -17,12 +18,18 @@ public class Board {
 	private Map<State, Integer> score;
 	private List<Map<Integer, State>> boardSituations; 
 	
+	// Constructor
 	public Board(int dimension) {
 		this.dimension = dimension;
+		
+		// Initialize all intersections
 		for (int i = 0; i < this.dimension * this.dimension; i++) {
 			this.intersections.put(i, new Intersection(i, this.dimension));
 		}
+		
 		score = new HashMap<State, Integer>();
+		
+		// Black is the first one to move, so white is set als lastMove by default
 		lastMove = State.WHITE;
 		score.put(lastMove, 0);
 		State stateToCalculate = lastMove.next();
@@ -38,6 +45,7 @@ public class Board {
 	}
 
 	public boolean setIntersection(int index, State state) {
+		// make a move, provided the move is valid
 		if (isValidMove(index, state)) {
 		Intersection intersect = intersections.get(index);
 		intersect.setState(state);
@@ -51,6 +59,10 @@ public class Board {
 	}
 	
 	public boolean isValidMove(int index, State state) {
+		// a move is valid if:
+		// - the coordinates are valid
+		// - the intersection is empty
+		// - it does not replicate a previous situation
 		if (isIntersection(index) && intersections.get(index).getState().equals(State.EMPTY) && !replicatesPreviousBoard(index, state)) {
 			return true;
 		} 
@@ -58,10 +70,12 @@ public class Board {
 	}
 	
 	public void copyBoard() {
+		// back-up the current situations
 		boardSituations.add(currentSituation());
 	}
 	
 	public Map<Integer, State> currentSituation() {
+		// make a representation of the current situation
 		Map<Integer, State> currentSituation = new HashMap<Integer, State>();
 		for (int i = 0; i < intersections.size(); i++) {
 			currentSituation.put(i, intersections.get(i).getState());
@@ -69,6 +83,7 @@ public class Board {
 		return currentSituation;
 	}
 	
+	// indicates whether this situation has already occurred
 	public boolean replicatesPreviousBoard(int index, State state) {
 		// would this move replicate a previous board situation?
 		Map<Integer, State> currentSituation = currentSituation();
@@ -82,14 +97,18 @@ public class Board {
 		return false;
 	}
 	
+	// updates the score, the score is determined by:
+	// - the occupied area
+	// - the enclosed area
 	public void updateScore() {
-		for (Entry<Integer, Intersection> entry : intersections.entrySet()) 	{
-			State state = entry.getValue().getState();
+		for (Entry<State, Integer> entry : score.entrySet()) 	{
+			State state = entry.getKey();
 			int sum = occupiedArea(state) + enclosedArea(state);
 			score.replace(state, sum);
 		}
 	}
 	
+	// count the amount of occupied intersections
 	public int occupiedArea(State state) {
 		int sum = 0;
 		Intersection intersect = null;
@@ -102,6 +121,7 @@ public class Board {
 		return sum;
 	}
 	
+	// calculate the enclosed area
 	public int enclosedArea(State state) {
 		int sum = 0;
 		// get all groups with state empty
@@ -126,6 +146,8 @@ public class Board {
 		return score;
 	}
 
+	// update all the groups
+	// groups are defined as orthogonally adjacent intersections with the same state, thus this also includes empty area's
 	public void updateGroups() {
 		for (int i = 0; i < intersections.size(); i++) {
 			Intersection intersectToEval = intersections.get(i);
@@ -178,6 +200,9 @@ public class Board {
 		}
 	}
 
+	// Does any of the intersections in this set belong to a certain group?
+	// No --> return null
+	// Yes --> return that group 
 	public Group getGroupOfSetOfIntersections(Set<Intersection> intersections) {
 		// cycle through intersections
 		for (Intersection intersect : intersections) {
@@ -210,6 +235,7 @@ public class Board {
 		return null;
 	}
 
+	// indicates if a group has liberties
 	public boolean hasLiberties(Group group) {
 		Set<Intersection> adjacentIntersects = adjacentIntersectionsGroup(group);
 		Set<Intersection> emptyIntersects = intersectionsWithState(adjacentIntersects, State.EMPTY);
@@ -220,6 +246,7 @@ public class Board {
 		}
 	}
 	
+	// if a group is captured (it has no more liberties), the stones are removed. I.e. the intersections are set to empty
 	public void setGroupToEmpty(Group group) {
 		Set<Intersection> set = (Set<Intersection>) group.getIntersections().values();
 		for (Intersection intersect : set) {
@@ -227,6 +254,7 @@ public class Board {
 		}
 	}
 
+	// return a set of intersections with a predefined state
 	public Set<Intersection> intersectionsWithState(Set<Intersection> intersections, State state) {
 		Set<Intersection> setToReturn = new HashSet<Intersection>();
 		for (Intersection intersect : intersections) {
@@ -237,14 +265,17 @@ public class Board {
 		return setToReturn;
 	}
 
+	// indicates whether the coordinates for an intersection are valid
 	public boolean isIntersection(int row, int col) {
 		return row >= 0 && row < this.dimension && col >= 0 && col < this.dimension;
 	}
 
+	// indicates whether the coordinates for an intersection are valid
 	public boolean isIntersection(int index) {
 		return index >= 0 && index < this.dimension * this.dimension;
 	}
 
+	// indicates whether the set is homogeneous. I.e. all the intersections have the same state
 	public boolean setHasHomoState(Set<Intersection> intersections) {
 		int i = 0;
 		State state = null;
@@ -298,6 +329,7 @@ public class Board {
 		return adjacentIntersectionsGroup;
 	}
 
+	// all adjacent intersections of a group with a state similar to the group
 	public Set<Intersection> adjacentIntersectionsGroupWithEqualState(Group group) {
 		State state = group.getState();
 		Set<Intersection> adjacentIntersectionsGroup = adjacentIntersectionsGroup(group);
@@ -310,6 +342,7 @@ public class Board {
 		return adjacentIntersectionsGroup;
 	}
 
+	// all adjacent intersections of a intersection
 	public Set<Intersection> adjacentIntersectionsIntersect(Intersection intersect) {
 		int col = intersect.getCol();
 		int row = intersect.getRow();
@@ -340,6 +373,7 @@ public class Board {
 		return adjacentIntersections;
 	}
 
+	// all adjacent intersections of a intersection with a state similar to the provided intersection
 	public Set<Intersection> adjecentIntersectionsIntersectWithEqualState(Intersection intersect) {
 		State state = intersect.getState();
 		Set<Intersection> intersections = adjacentIntersectionsIntersect(intersect);
