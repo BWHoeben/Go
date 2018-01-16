@@ -14,11 +14,21 @@ public class Board {
 	private Map<Integer, Intersection> intersections;
 	private List<Group> groups;
 	private State lastMove;
-
+	private Map<State, Integer> score;
+	private List<Map<Integer, State>> boardSituations; 
+	
 	public Board(int dimension) {
 		this.dimension = dimension;
 		for (int i = 0; i < this.dimension * this.dimension; i++) {
 			this.intersections.put(i, new Intersection(i, this.dimension));
+		}
+		score = new HashMap<State, Integer>();
+		lastMove = State.WHITE;
+		score.put(lastMove, 0);
+		State stateToCalculate = lastMove.next();
+		while (!stateToCalculate.equals(lastMove)) {
+			score.put(stateToCalculate, 0);
+			stateToCalculate = stateToCalculate.next();
 		}
 		updateGroups();
 	}
@@ -27,11 +37,93 @@ public class Board {
 		return dimension;
 	}
 
-	public void setIntersection(int index, State state) {
+	public boolean setIntersection(int index, State state) {
+		if (isValidMove(index, state)) {
 		Intersection intersect = intersections.get(index);
 		intersect.setState(state);
 		this.lastMove = state;		
 		updateGroups();
+		updateScore();
+		copyBoard();
+		return true;
+		} 
+		return false;
+	}
+	
+	public boolean isValidMove(int index, State state) {
+		if (isIntersection(index) && intersections.get(index).getState().equals(State.EMPTY) && !replicatesPreviousBoard(index, state)) {
+			return true;
+		} 
+		return false;
+	}
+	
+	public void copyBoard() {
+		boardSituations.add(currentSituation());
+	}
+	
+	public Map<Integer, State> currentSituation() {
+		Map<Integer, State> currentSituation = new HashMap<Integer, State>();
+		for (int i = 0; i < intersections.size(); i++) {
+			currentSituation.put(i, intersections.get(i).getState());
+		}
+		return currentSituation;
+	}
+	
+	public boolean replicatesPreviousBoard(int index, State state) {
+		// would this move replicate a previous board situation?
+		Map<Integer, State> currentSituation = currentSituation();
+		//update with hypothetical move
+		currentSituation.replace(index, state);
+		for (Map<Integer, State> previousSituation : boardSituations) {
+			if (previousSituation.equals(currentSituation)) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	public void updateScore() {
+		for (Entry<Integer, Intersection> entry : intersections.entrySet()) 	{
+			State state = entry.getValue().getState();
+			int sum = occupiedArea(state) + enclosedArea(state);
+			score.replace(state, sum);
+		}
+	}
+	
+	public int occupiedArea(State state) {
+		int sum = 0;
+		Intersection intersect = null;
+		for (int i = 0; i < intersections.size(); i++) {
+			intersect = intersections.get(i);
+			if (intersect.getState().equals(state)) {
+				sum++;
+			}
+		}
+		return sum;
+	}
+	
+	public int enclosedArea(State state) {
+		int sum = 0;
+		// get all groups with state empty
+		List<Group> emptyGroups = new ArrayList<Group>();
+		for (Group group : groups) {
+			if (group.getState().equals(State.EMPTY)) {
+				emptyGroups.add(group);
+			}
+		}
+		
+		// a group is enclosed if all neighbours have a similar state
+		for (Group group : emptyGroups) {
+		Set<Intersection> adjacentIntersections = adjacentIntersectionsGroup(group);
+		if (setHasHomoState(adjacentIntersections)) {
+			sum = sum + group.getIntersections().size();
+		}
+		}
+		return sum;
+	}
+	
+	public Map<State, Integer> getScore() {
+		return score;
 	}
 
 	public void updateGroups() {
@@ -78,6 +170,7 @@ public class Board {
 			if (group.getState().equals(stateToCheck)) {
 				if(!hasLiberties(group)) {
 					setGroupToEmpty(group);
+					updateGroups();
 				}
 			}
 		}
@@ -118,7 +211,13 @@ public class Board {
 	}
 
 	public boolean hasLiberties(Group group) {
+		Set<Intersection> adjacentIntersects = adjacentIntersectionsGroup(group);
+		Set<Intersection> emptyIntersects = intersectionsWithState(adjacentIntersects, State.EMPTY);
+		if (emptyIntersects.size() == 0) {
 		return false;
+		} else {
+			return true;
+		}
 	}
 	
 	public void setGroupToEmpty(Group group) {
@@ -146,7 +245,7 @@ public class Board {
 		return index >= 0 && index < this.dimension * this.dimension;
 	}
 
-	public boolean setIsHomoState(Set<Intersection> intersections) {
+	public boolean setHasHomoState(Set<Intersection> intersections) {
 		int i = 0;
 		State state = null;
 		for (Intersection intersect : intersections) {
