@@ -10,6 +10,7 @@ public class Intersection {
 	public Intersection(int index, int dimensionOfBoard) {
 		this.index = index;
 		this.dimensionOfBoard = dimensionOfBoard;
+		this.state = State.EMPTY;
 	}
 	
 	public int getRow() {
@@ -42,5 +43,9 @@ public class Intersection {
 	
 	public int calculateIndex(int col, int row, int dimensionOfBoard) {
 		return (row * dimensionOfBoard) + col;
+	}
+	
+	public int getDimension() {
+		return this.dimensionOfBoard;
 	}
 }
