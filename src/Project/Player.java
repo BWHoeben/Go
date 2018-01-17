@@ -19,10 +19,10 @@ public abstract class Player {
 		return colour;
 	}
 	
-	public abstract int determineMove();
+	public abstract int determineMove(Board board);
 	
 	public void makeMove (Board board) {
-		int move = determineMove();
+		int move = determineMove(board);
 		board.setIntersection(move, getCoulour());
 	}
 }

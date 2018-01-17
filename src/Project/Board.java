@@ -108,6 +108,18 @@ public class Board {
 		}
 	}
 	
+	// returns the indexes of all valid moves
+	public Set<Integer> getValidMoves() {
+		Set<Integer> returnSet = new HashSet<Integer>();
+		for (Map.Entry<Integer, Intersection> entry : intersections.entrySet()) {
+			if (isValidMove(entry.getKey(), entry.getValue().getState())) {
+				returnSet.add(entry.getKey());
+			}
+		}
+		
+		return returnSet;
+	}
+	
 	// count the amount of occupied intersections
 	public int occupiedArea(State state) {
 		int sum = 0;
