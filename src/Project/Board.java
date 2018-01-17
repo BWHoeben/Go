@@ -74,6 +74,13 @@ public class Board {
 		boardSituations.add(currentSituation());
 	}
 	
+	public boolean GameOver() {
+		if (getValidMoves().size() > 0) {
+			return false;
+		}
+		return true;
+	}
+	
 	public Map<Integer, State> currentSituation() {
 		// make a representation of the current situation
 		Map<Integer, State> currentSituation = new HashMap<Integer, State>();
