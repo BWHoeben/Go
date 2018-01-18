@@ -49,8 +49,8 @@ public class ClientHandler extends Thread {
 		try {
 			String msg = in.readLine();
 			while (msg != null) {
-				server.broadcast(clientName + ": " + msg);
-				sendMessage(msg);
+				//server.broadcast(clientName + ": " + msg);
+				//sendMessage(msg);
 				msg = in.readLine();
 			}
 			shutdown();

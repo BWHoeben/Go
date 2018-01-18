@@ -89,10 +89,10 @@ public class Client extends Thread {
 		}
 	}
 
-	public void checkEndCommand(String[] array) {
+	public void checkEndCommand(String[] array, String message) {
 		if (!array[array.length - 1].equals(Protocol.COMMAND_END)) {
 			try {
-				throw new InvalidCommandException("Message did not end with end-command");
+				throw new InvalidCommandException(String.format("Message did not end with end-command. Message was: %s",message));
 			} catch (InvalidCommandException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -100,13 +100,13 @@ public class Client extends Thread {
 		}
 	}
 
-	public String[] trimEndCommand(String[] array) {
-		checkEndCommand(array);
+	public String[] trimEndCommand(String[] array, String msg) {
+		checkEndCommand(array, msg);
 		return Arrays.copyOfRange(array, array.length - 1, array.length - 2);
 	}
 
 	public void handleMessage(String msg) throws InvalidCommandException, NotAnIntException {
-		String[] splitString = trimEndCommand(msg.split(Protocol.DELIMITER1));
+		String[] splitString = trimEndCommand(msg.split(Protocol.DELIMITER1), msg);
 
 		if (splitString[0].equals(Protocol.START) && splitString.length == 2) {
 			firstToConnect = true;
@@ -487,7 +487,7 @@ public class Client extends Thread {
 	}
 
 	public void send(String msg) {
-		checkEndCommand(msg.split(Protocol.DELIMITER1));
+		checkEndCommand(msg.split(Protocol.DELIMITER1), msg);
 		try {
 			out.write(msg);
 			out.newLine();
@@ -523,7 +523,7 @@ public class Client extends Thread {
 		int answer = scanner.nextInt();
 		if (answer == 1) {
 			isHuman = true;
-			System.out.println("Playing as human");
+			System.out.println("Playing as human.");
 		} else if (answer == 2) {
 			isHuman = false;
 			System.out.println("Playing as computer");
