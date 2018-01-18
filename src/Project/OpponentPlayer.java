@@ -12,5 +12,4 @@ public class OpponentPlayer extends Player {
 		// TODO Auto-generated method stub
 		return 0;
 	}
-
 }

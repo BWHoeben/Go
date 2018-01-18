@@ -41,8 +41,8 @@ public abstract class Player {
 	
 	public abstract int determineMove(Board board);
 	
-	public void makeMove (Board board) {
-		int move = determineMove(board);
-		board.setIntersection(move, getState());
-	}
+	//public void makeMove (Board board) {
+	//	int move = determineMove(board);
+	//	board.setIntersection(move, getState());
+	//}
 }

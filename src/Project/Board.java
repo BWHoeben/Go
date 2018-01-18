@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import Project.Errors.InvalidMoveException;
+
 public class Board {
 
 	// Instance variables
@@ -44,7 +46,7 @@ public class Board {
 		return dimension;
 	}
 
-	public boolean setIntersection(int index, Colour state) {
+	public void setIntersection(int index, Colour state) {
 		// make a move, provided the move is valid
 		if (isValidMove(index, state)) {
 		Intersection intersect = intersections.get(index);
@@ -53,9 +55,14 @@ public class Board {
 		updateGroups();
 		updateScore();
 		copyBoard();
-		return true;
-		} 
-		return false;
+		} else {
+			try {
+				throw new InvalidMoveException("Invalid move!");
+			} catch (InvalidMoveException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
 	}
 	
 	public boolean isValidMove(int index, Colour state) {

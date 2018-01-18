@@ -6,6 +6,8 @@ public class Protocol {
 	public static final String NAME = "NAME";
 	public static final String EXTENSIONS = "EXTENSIONS";
 	public static final String MOVE = "MOVE";
+	public static final String TURN = "TURN";
+	public static final String FIRST = "FIRST";
 	public static final String PASS = "PASS";
 	public static final String SETTINGS = "SETTINGS";
 	public static final String QUIT = "QUIT";

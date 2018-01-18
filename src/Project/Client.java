@@ -19,6 +19,7 @@ import GUI.GoGUIIntegrator;
 import Project.Errors.CouldNotConnectException;
 import Project.Errors.InvalidColourException;
 import Project.Errors.InvalidCommandException;
+import Project.Errors.InvalidCoordinateException;
 import Project.Errors.InvalidHostException;
 import Project.Errors.NameException;
 import Project.Errors.NoValidPortException;
@@ -39,6 +40,7 @@ public class Client extends Thread {
 	private static boolean isHuman;
 	private boolean firstToConnect = false;
 	private int boardSize;
+	private Game game;
 
 	public Client(String name, InetAddress host, int port) throws CouldNotConnectException {
 		try {
@@ -82,8 +84,25 @@ public class Client extends Thread {
 		}
 	}
 
+	public void checkEndCommand(String[] array) {
+		if (!array[array.length - 1].equals(Protocol.COMMAND_END)) {
+			try {
+				throw new InvalidCommandException("Message did not end with end-command");
+			} catch (InvalidCommandException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+	}
+
+	public String[] trimEndCommand(String[] array) {
+		checkEndCommand(array);
+		return Arrays.copyOfRange(array, array.length - 1, array.length - 2);
+	}
+
 	public void handleMessage(String msg) throws InvalidCommandException, NotAnIntException {
-		String[] splitString = msg.split(Protocol.DELIMITER1);
+		String[] splitString = trimEndCommand(msg.split(Protocol.DELIMITER1));
+
 		if (splitString[0].equals(Protocol.START) && splitString.length == 2) {
 			firstToConnect = true;
 			try {
@@ -121,8 +140,62 @@ public class Client extends Thread {
 					e.printStackTrace();
 				}
 			}
+		} else if (splitString[0].equals(Protocol.TURN)) {
+			if (splitString.length != 4) {
+				throw new InvalidCommandException("Server provided incorrect arguments.");
+			} 
+			Player playerToMakeMove = getPlayer(splitString[3]);
+			if (!splitString[2].equals(Protocol.FIRST)) {
+			Colour playerWhoMadeMove = getPlayer(splitString[3]).getState();
+			int move = getMove(splitString[2]);
+			this.game.getBoard().setIntersection(move, playerWhoMadeMove);
+			} 
+			int moveToMake = playerToMakeMove.determineMove(game.getBoard());
 		}
 
+	}
+	
+	public int getMove(String move) {
+		String[] moveArray = move.split(Protocol.DELIMITER2);
+		if (moveArray.length != 2) {
+			try {
+				throw new InvalidCoordinateException("Provided coordinates were not valid!");
+			} catch (InvalidCoordinateException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		try {
+		int row = Integer.parseInt(moveArray[0]);
+		int col = Integer.parseInt(moveArray[1]);
+		return calculateIndex(col, row, this.boardSize);
+		} catch (NumberFormatException e) {
+			try {
+				throw new InvalidCoordinateException("Provided coordinates were not valid!");
+			} catch (InvalidCoordinateException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+		}
+		return -1000;
+	}
+	
+	public int calculateIndex(int col, int row, int dimensionOfBoard) {
+		return (row * dimensionOfBoard) + col;
+	}
+	
+	public Player getPlayer(String playerName) {
+		for (Player player : players) {
+			if (player.getName().equals(playerName));
+			return player;
+		}
+		try {
+			throw new NameException("Unkown name!");
+		} catch (NameException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return null;
 	}
 
 	// if the player is the first to connect, the setup of the game has to be completed
@@ -135,7 +208,7 @@ public class Client extends Thread {
 				e.printStackTrace();
 			}
 		}
-		
+
 		try {
 			if (this.numberOfPlayers != Integer.parseInt(stringArray[1])) {
 				throw new InvalidCommandException("The number of players defined by the server does not match");
@@ -161,9 +234,9 @@ public class Client extends Thread {
 		} catch (InvalidCommandException e) {
 			e.printStackTrace();
 		}
-		
+
 		String[] namesOfPlayers = Arrays.copyOfRange(stringArray, 4, stringArray.length - 1);
-		
+
 		if (!namePresent(namesOfPlayers, this.name)) {
 			try {
 				throw new InvalidCommandException("The names provided by the server do not match");
@@ -172,7 +245,7 @@ public class Client extends Thread {
 				e.printStackTrace();
 			}
 		}
-	
+
 		if (numberOfPlayers == 2) {
 			String opponentName = null;
 			Colour opponentColour = null;
@@ -189,17 +262,17 @@ public class Client extends Thread {
 			players.add(new OpponentPlayer(opponentName, opponentColour));
 		} 
 		else {
-		//// remove name of clientPlayer from list of players to implement
-		//for (int i = 0; i < namesOfPlayers.length; i++) {
-		//	if (!namesOfPlayers[i].equals(name)) {
-		//		players.add(new OpponentPlayer(namesOfPlayers[i], ));
-		//	}
-		//}
-		throw new NotYetImplementedException("MULTIPLE PLAYERS IS NOT YET IMPLEMENTED!");
+			//// remove name of clientPlayer from list of players to implement
+			//for (int i = 0; i < namesOfPlayers.length; i++) {
+			//	if (!namesOfPlayers[i].equals(name)) {
+			//		players.add(new OpponentPlayer(namesOfPlayers[i], ));
+			//	}
+			//}
+			throw new NotYetImplementedException("MULTIPLE PLAYERS IS NOT YET IMPLEMENTED!");
 		}	
 		startGame();
 	}
-	
+
 	public boolean namePresent(String[] array, String name) {
 		for (int i = 0; i < array.length; i++) {
 			if (array[i].equals(name)) {
@@ -325,11 +398,12 @@ public class Client extends Thread {
 	}
 
 	public void startGame() {
-		Game game = new Game(players, this.boardSize, new GoGUIIntegrator(true, true, this.boardSize));
+		this.game = new Game(players, this.boardSize, new GoGUIIntegrator(true, true, this.boardSize));
 		game.start();
 	}
 
 	public void send(String msg) {
+		checkEndCommand(msg.split(Protocol.DELIMITER1));
 		try {
 			out.write(msg);
 			out.newLine();
