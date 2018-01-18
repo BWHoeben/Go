@@ -3,17 +3,17 @@ package Project;
 public class ComputerPlayer extends Player implements Strategy {
 
 	private static String name;
-	private State state;
+	private Colour state;
 	private Strategy strategy;
 	
-	public ComputerPlayer(State state, Strategy strategy) {
+	public ComputerPlayer(Colour state, Strategy strategy) {
 		super(name, state);
 		this.state = state;
 		this.strategy = strategy;
 		ComputerPlayer.name = strategy.getName() + state.toString();
 	}
 	
-	public ComputerPlayer(State state) {
+	public ComputerPlayer(Colour state) {
 		super(name, state);
 		this.strategy = new RandomStrategy();
 		ComputerPlayer.name = strategy.getName() + state.toString();
@@ -26,7 +26,7 @@ public class ComputerPlayer extends Player implements Strategy {
 	}
 	
 	@Override
-	public int determineMove(Board board, State state) {
+	public int determineMove(Board board, Colour state) {
 		return strategy.determineMove(board, state);
 	}
 }

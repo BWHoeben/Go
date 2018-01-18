@@ -6,10 +6,10 @@ public abstract class Player {
 
 	private String name;
 	private int score;
-	private State colour;
+	private Colour colour;
 	private boolean isInGame;
 	
-	public Player(String name, State colour) {
+	public Player(String name, Colour colour) {
 		this.name = name;
 		this.colour = colour;
 		this.isInGame = false;
@@ -35,7 +35,7 @@ public abstract class Player {
 		return name;
 	}
 	
-	public State getState() {
+	public Colour getState() {
 		return colour;
 	}
 	

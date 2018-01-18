@@ -6,18 +6,18 @@ import java.util.Set;
 public class Group {
 	
 	private Map<Integer, Intersection> intersections;
-	private State state;
+	private Colour state;
 
-	public Group(Map<Integer, Intersection> intersections, State state) {
+	public Group(Map<Integer, Intersection> intersections, Colour state) {
 		this.state = state;
 		this.intersections = intersections;
 	}
 		
-	public void setState(State state) {
+	public void setState(Colour state) {
 		this.state = state;
 	}
 	
-	public State getState() {
+	public Colour getState() {
 		return this.state;
 	}
 	

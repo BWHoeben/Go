@@ -1,12 +1,8 @@
 package Project;
 
-import java.util.HashSet;
-import java.util.Scanner;
 import java.util.Set;
-import java.util.Vector;
 
 import GUI.GoGUIIntegrator;
-import Project.State;
 
 public class Game extends Thread {
 	
@@ -23,7 +19,7 @@ public class Game extends Thread {
 		int i = 0;
 		for (Player player : playersSet) {
 			players[i] = player;
-			if (player.getState().equals(Project.State.BLACK)) {
+			if (player.getState().equals(Project.Colour.BLACK)) {
 				current = i;
 			}
 			i++;

@@ -4,13 +4,13 @@ public class Intersection {
 
 	private int index;
 	private int dimensionOfBoard;
-	private State state;
+	private Colour state;
 	
 	
 	public Intersection(int index, int dimensionOfBoard) {
 		this.index = index;
 		this.dimensionOfBoard = dimensionOfBoard;
-		this.state = State.EMPTY;
+		this.state = Colour.EMPTY;
 	}
 	
 	public int getRow() {
@@ -21,11 +21,11 @@ public class Intersection {
 		return index - getRow();		
 	}
 	
-	public State getState() {
+	public Colour getState() {
 		return this.state;
 	}
 	
-	public void setState(State state) {
+	public void setState(Colour state) {
 		this.state = state;
 	}
 	

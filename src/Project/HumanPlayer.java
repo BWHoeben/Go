@@ -2,7 +2,7 @@ package Project;
 
 public class HumanPlayer extends Player {
 
-	public HumanPlayer(String name, State state) {
+	public HumanPlayer(String name, Colour state) {
 		super(name, state);
 	}
 
