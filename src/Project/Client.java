@@ -146,13 +146,30 @@ public class Client extends Thread {
 			} 
 			Player playerToMakeMove = getPlayer(splitString[3]);
 			if (!splitString[2].equals(Protocol.FIRST)) {
-			Colour playerWhoMadeMove = getPlayer(splitString[3]).getState();
+			Player playerWhoMadeMove = getPlayer(splitString[3]);
 			int move = getMove(splitString[2]);
-			this.game.getBoard().setIntersection(move, playerWhoMadeMove);
+			this.game.getBoard().setIntersection(move, playerWhoMadeMove.getState());
 			} 
 			int moveToMake = playerToMakeMove.determineMove(game.getBoard());
+			this.game.getBoard().setIntersection(moveToMake, playerToMakeMove.getState());
+			String move = indexToMove(moveToMake);
+			send(Protocol.MOVE + Protocol.DELIMITER1 + move);
 		}
 
+	}
+	
+	public String indexToMove(int index) {
+		int col = indexToCol(index);
+		int row = indexToRow(index);
+		return row + Protocol.DELIMITER2 + col;
+	}
+	
+	public int indexToCol(int index) {
+		return index - (index % this.boardSize);
+	}
+	
+	public int indexToRow(int index) {
+		return index % this.boardSize;
 	}
 	
 	public int getMove(String move) {
@@ -399,7 +416,6 @@ public class Client extends Thread {
 
 	public void startGame() {
 		this.game = new Game(players, this.boardSize, new GoGUIIntegrator(true, true, this.boardSize));
-		game.start();
 	}
 
 	public void send(String msg) {

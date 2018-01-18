@@ -4,11 +4,12 @@ import java.util.Set;
 
 import GUI.GoGUIIntegrator;
 
-public class Game extends Thread {
+public class Game //extends Thread
+{
 	
 	public int numberOfPlayers;
 	
-	private int current;
+//	private int current;
 	private Player[] players;
 	private Board board;
 	
@@ -19,25 +20,25 @@ public class Game extends Thread {
 		int i = 0;
 		for (Player player : playersSet) {
 			players[i] = player;
-			if (player.getState().equals(Project.Colour.BLACK)) {
-				current = i;
-			}
+//			if (player.getState().equals(Project.Colour.BLACK)) {
+//				current = i;
+//			}
 			i++;
 		}
 	}
 
-	public void run() {
-		play();
-	}
+//	public void run() {
+//		play();
+//	}
 	
-	public void play() {
-		int i = current;
-		while (!this.board.GameOver()) {
-			players[current].makeMove(board);
-			current = i % numberOfPlayers;
-			i++;
-		}
-	}
+//	public void play() {
+//		int i = current;
+//		while (!this.board.GameOver()) {
+//			players[current].makeMove(board);
+//			current = i % numberOfPlayers;
+//			i++;
+//		}
+//	}
 	
 	public Board getBoard() {
 		return board;
