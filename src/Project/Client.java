@@ -11,11 +11,14 @@ import java.net.Socket;
 import java.net.UnknownHostException;
 import java.text.MessageFormat;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
 
 import GUI.GoGUIIntegrator;
+import Project.Errors.AlreadyPassedException;
 import Project.Errors.CouldNotConnectException;
 import Project.Errors.InvalidColourException;
 import Project.Errors.InvalidCommandException;
@@ -25,6 +28,7 @@ import Project.Errors.NameException;
 import Project.Errors.NoValidPortException;
 import Project.Errors.NotAnIntException;
 import Project.Errors.NotYetImplementedException;
+import Project.Errors.ScoresDoNotMatchException;
 import Project.Colour;
 
 
@@ -48,6 +52,7 @@ public class Client extends Thread {
 		} catch (IOException e) {
 			throw new CouldNotConnectException("Could not connect to server!");
 		}
+		System.out.println("Connection succesfull!");
 		this.name = name;
 		try {
 			this.in = new BufferedReader(new InputStreamReader(sock.getInputStream()));
@@ -123,11 +128,9 @@ public class Client extends Thread {
 					try {
 						prepareGame(splitString);
 					} catch (NotYetImplementedException e) {
-						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
 				} catch (NameException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				} catch (NotAnIntException e) {
 					e.printStackTrace();
@@ -136,42 +139,107 @@ public class Client extends Thread {
 				try {
 					setupGame(splitString);
 				} catch (NotYetImplementedException e) {
-					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			}
 		} else if (splitString[0].equals(Protocol.TURN)) {
+			// incorrect arguments provided
 			if (splitString.length != 4) {
 				throw new InvalidCommandException("Server provided incorrect arguments.");
 			} 
-			Player playerToMakeMove = getPlayer(splitString[3]);
-			if (!splitString[2].equals(Protocol.FIRST)) {
-			Player playerWhoMadeMove = getPlayer(splitString[3]);
-			int move = getMove(splitString[2]);
-			this.game.getBoard().setIntersection(move, playerWhoMadeMove.getState());
-			} 
-			int moveToMake = playerToMakeMove.determineMove(game.getBoard());
-			this.game.getBoard().setIntersection(moveToMake, playerToMakeMove.getState());
-			String move = indexToMove(moveToMake);
-			send(Protocol.MOVE + Protocol.DELIMITER1 + move);
-		}
 
+			Player playerWhoJustHadATurn = getPlayer(splitString[1]);
+			Player playerToMakeMove = getPlayer(splitString[3]);
+			// opponent passed
+			if (splitString[2].equals(Protocol.PASS)) {
+				if (playerWhoJustHadATurn.getLastMoveWasPass()) {
+					try {
+						throw new AlreadyPassedException("Player already passed last time!");
+					} catch (AlreadyPassedException e) {
+						e.printStackTrace();
+					}	
+				}
+				playerWhoJustHadATurn.pass(true);
+			} else if (!splitString[2].equals(Protocol.FIRST)) {
+				int move = getMove(splitString[2]);
+				this.game.getBoard().setIntersection(move, playerWhoJustHadATurn.getState());
+			} 
+			if (playerToMakeMove.equals(clientPlayer)) { 
+				int moveToMake = playerToMakeMove.determineMove(game.getBoard());
+				this.game.getBoard().setIntersection(moveToMake, playerToMakeMove.getState());
+				String move = indexToMove(moveToMake);
+				send(Protocol.MOVE + Protocol.DELIMITER1 + move);
+			}
+		} else if (splitString[0].equals(Protocol.ENDGAME)) {
+			if (splitString[1].equals(Protocol.ABORTED)) {
+				System.out.println("Game was aborted!");	
+			} else if (splitString[1].equals(Protocol.FINISHED)) {
+				System.out.println("Game has finished!");	
+			} else if (splitString[1].equals(Protocol.TIMEOUT)) {
+				System.out.println("Game was aborted due to timeout!");	
+			} else {
+				throw new InvalidCommandException("Server provided incorrect arguments.");
+			}
+			if (numberOfPlayers == 2) {
+				if (splitString.length != 6) {
+					throw new InvalidCommandException("Server provided incorrect arguments.");
+				}
+
+				Map<Player, Integer> playersToCheck = new HashMap<Player, Integer>(); 	 
+				checkScores(playersToCheck, this.game.getBoard());
+				System.out.println(MessageFormat.format("{0} won with a score of {1}, {2} lost with a score of {3}", splitString[3], splitString[4], splitString[5] ,splitString[6]));
+				endGame();
+			} else {
+				try {
+					throw new NotYetImplementedException("Not yet implemented!");
+				} catch (NotYetImplementedException e) {
+					e.printStackTrace();
+				}
+			}
+
+		} else {
+			throw new InvalidCommandException("Server provided incorrect arguments.");
+		}
 	}
-	
+
+	public void checkScores(Map<Player, Integer> playersToCheck, Board board) {
+		Map<Colour, Integer> scoresFromBoard = game.getBoard().getScore();
+		for (Map.Entry<Player, Integer> entry : playersToCheck.entrySet()) {
+			if (entry.getValue() != scoresFromBoard.get(entry.getKey().getState())) {
+				try {
+					throw new ScoresDoNotMatchException(MessageFormat.format("Scores do not match! Server provided a score of {0} for player {1} but local administration indicates a score of {2}.", entry.getValue(), entry.getKey().getName(), scoresFromBoard.get(entry.getKey().getState())));
+				} catch (ScoresDoNotMatchException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+		}
+	}
+
+	public void endGame() {
+		System.out.println("Ending game");
+		try {
+			sock.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+
 	public String indexToMove(int index) {
 		int col = indexToCol(index);
 		int row = indexToRow(index);
 		return row + Protocol.DELIMITER2 + col;
 	}
-	
+
 	public int indexToCol(int index) {
 		return index - (index % this.boardSize);
 	}
-	
+
 	public int indexToRow(int index) {
 		return index % this.boardSize;
 	}
-	
+
 	public int getMove(String move) {
 		String[] moveArray = move.split(Protocol.DELIMITER2);
 		if (moveArray.length != 2) {
@@ -183,9 +251,9 @@ public class Client extends Thread {
 			}
 		}
 		try {
-		int row = Integer.parseInt(moveArray[0]);
-		int col = Integer.parseInt(moveArray[1]);
-		return calculateIndex(col, row, this.boardSize);
+			int row = Integer.parseInt(moveArray[0]);
+			int col = Integer.parseInt(moveArray[1]);
+			return calculateIndex(col, row, this.boardSize);
 		} catch (NumberFormatException e) {
 			try {
 				throw new InvalidCoordinateException("Provided coordinates were not valid!");
@@ -196,11 +264,11 @@ public class Client extends Thread {
 		}
 		return -1000;
 	}
-	
+
 	public int calculateIndex(int col, int row, int dimensionOfBoard) {
 		return (row * dimensionOfBoard) + col;
 	}
-	
+
 	public Player getPlayer(String playerName) {
 		for (Player player : players) {
 			if (player.getName().equals(playerName));
@@ -447,17 +515,33 @@ public class Client extends Thread {
 		System.out.println(msg);
 	}
 
-	public static void main(String[] args) throws InvalidHostException, NoValidPortException {
-		if (args[0].equals("Human")) {
+	public static void main(String[] args) throws InvalidHostException, NoValidPortException, InvalidCommandException {
+		Scanner scanner = new Scanner(System.in);
+
+		System.out.println("How do you want to play? 1 = human, 2 = computer");
+		try {
+		int answer = scanner.nextInt();
+		if (answer == 1) {
 			isHuman = true;
-		} else {
+			System.out.println("Playing as human");
+		} else if (answer == 2) {
 			isHuman = false;
+			System.out.println("Playing as computer");
+		} else {
+			scanner.close();
+			throw new InvalidCommandException("Wrong input!");
 		}
+		} catch (NumberFormatException e) {
+			throw new InvalidCommandException("Wrong input!");
+		}
+		
+		scanner.nextLine();
 
 		System.out.println("Please provide name: ");
-		Scanner scanner = new Scanner(System.in);
 		String name = scanner.nextLine();
 
+		System.out.println(MessageFormat.format("Welcome {0}!", name));
+		
 		int port = 0;
 		InetAddress host = null;
 

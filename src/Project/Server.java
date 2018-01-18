@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.Collection;
+import java.util.Scanner;
 import java.util.Set;
 import java.util.Vector;
 
@@ -15,26 +16,52 @@ public class Server extends Thread {
 	private int port;
 	private Collection<ClientHandler> clients;
 	private Set<Player> playersSet;
+	private ServerSocket ssock;
 	
-	public Server(int port) {
-		this.port = port;
-		this.clients = new Vector<ClientHandler>();
+	public Server() {
+    		Scanner scanner = new Scanner(System.in);
+    		System.out.println("Please provide a port: ");
+    		try {
+    		this.port = scanner.nextInt();
+    		System.out.println("Using port " + this.port);
+    		} catch (NumberFormatException e) {
+    			try {
+					throw new NoValidPortException("Not a valid port!");
+				} catch (NoValidPortException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+    		}
+    		
+    		boolean loop = true;
+    		while (loop)
+    		try {
+    				this.ssock = new ServerSocket(port);
+				loop = false;
+    		} catch (IOException e) {
+				System.out.println("Port is already used!");
+			}
+    		this.clients = new Vector<ClientHandler>();
+		
 	}
 
 	public void run() {
-		try (ServerSocket ssock = new ServerSocket(port);) {
-			int i = 0;
+		int i = 0;
 			while (true) {
-				Socket sock = ssock.accept();
-				ClientHandler handler = new ClientHandler(this, sock);
-				print("[client no . " + (i++) + " connected .]");
-				handler.announce();
-				handler.start();
-				addHandler(handler);
-			}
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+				Socket sock;
+				try {
+					System.out.println("Waiting for client...");
+					sock = this.ssock.accept();
+					ClientHandler handler = new ClientHandler(this, sock);
+					print("[client no . " + (i++) + " connected .]");
+					handler.announce();
+					handler.start();
+					addHandler(handler);	
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				}
 	}
 	
 	public void broadcast(String msg) {
@@ -63,15 +90,8 @@ public class Server extends Thread {
     }
     
     public static void main(String[] args) throws InvalidNumberOfArgumentsException, NoValidPortException {
-    	
-    	if (args.length != 1) {
-    		throw new InvalidNumberOfArgumentsException("Incorrect amount of arguments provided!");
+    	System.out.println("Starting server...");
+    	Server server = new Server();
+    	server.start();
     	}
-    	try {
-    	Integer.parseInt(args[0]);
-    	} catch (NumberFormatException e) {
-    		throw new NoValidPortException("Not a valid port!");
-    	}
-    	new Server(Integer.parseInt(args[0]));
-    }
 }

@@ -8,6 +8,7 @@ public abstract class Player {
 	private int score;
 	private Colour colour;
 	private boolean isInGame;
+	private boolean lastMoveWasPass;
 	
 	public Player(String name, Colour colour) {
 		this.name = name;
@@ -15,10 +16,18 @@ public abstract class Player {
 		this.isInGame = false;
 	}
 	
+	public void pass(boolean pass) {
+		lastMoveWasPass = pass;
+	}
+	
+	public boolean getLastMoveWasPass() {
+		return lastMoveWasPass;
+	}
+	
 	public boolean isInGame() {
 		return isInGame();
 	}
-	
+			
 	public void EnterGame() throws AlreadyInGameException {
 		if (!isInGame) {
 		this.isInGame = true; 

@@ -23,6 +23,11 @@ public class Protocol {
 	
 	public static final String START = "START";
 	
+	public static final String ENDGAME = "ENDGAME";
+	public static final String FINISHED = "FINISHED";
+	public static final String ABORTED = "ABORTED";
+	public static final String TIMEOUT = "TIMEOUT";
+	
 	public Protocol() {
 		
 	}
