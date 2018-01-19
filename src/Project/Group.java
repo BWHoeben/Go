@@ -33,8 +33,8 @@ public class Group {
 		intersections.remove(intersect.getIndex());
 	}
 	
-	public void addSetOfIntersections(Set<Intersection> intersections) {
-		for (Intersection intersect : intersections) {
+	public void addSetOfIntersections(Set<Intersection> intersectionsArg) {
+		for (Intersection intersect : intersectionsArg) {
 			addIntersection(intersect);
 		}
 	}

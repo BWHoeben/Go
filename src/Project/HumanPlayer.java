@@ -43,8 +43,7 @@ public class HumanPlayer extends Player {
 				try {
 					row = Integer.parseInt(split[0]);
 					col = Integer.parseInt(split[1]);
-				} catch (NumberFormatException e)
-				{
+				} catch (NumberFormatException e) {
 					try {
 						scanner.close();
 						throw new NotAnIntException("Provided input should be a number!");
