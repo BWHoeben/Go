@@ -150,8 +150,14 @@ public class Client extends Thread {
 			}
 		} else if (splitString[0].equals(Protocol.TURN)) {
 			// incorrect arguments provided
+			
+			for (int i = 0; i < splitString.length; i++) {
+				print(splitString[i]);
+			}
+			
 			if (splitString.length != 4) {
-				throw new InvalidCommandException("Server provided incorrect arguments.");
+				throw new InvalidCommandException(String.format(
+						"Server provided incorrect arguments. Message was %s", msg));
 			} 
 
 			Player playerWhoJustHadATurn = getPlayer(splitString[1]);
@@ -539,7 +545,7 @@ public class Client extends Thread {
 	}
 
 	public void shutdown() {
-		send(Protocol.QUIT);
+		send(Protocol.QUIT + Protocol.DELIMITER1 + Protocol.COMMAND_END);
 		print("Closing socket connection...");
 		try {
 			sock.close();

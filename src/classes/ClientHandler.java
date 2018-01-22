@@ -104,11 +104,9 @@ public class ClientHandler extends Thread {
 		try {
 			String msg = in.readLine();
 			while (msg != null) {
-				sendMessageToClient(msg);	
-				//server.broadcast(msg);
+				server.handleMessage(msg, this);;
 				msg = in.readLine();
 				System.out.println("Message recieved");
-				//server.broadcast(msg);
 				System.out.println(msg);
 			}
 			shutdown();
@@ -135,7 +133,7 @@ public class ClientHandler extends Thread {
 	}
 	
 	public void sendMessageToServer(String msg) {
-		server.handleMessage(msg);
+		server.handleMessage(msg, this);
 	}
 	
 	/**
@@ -145,7 +143,7 @@ public class ClientHandler extends Thread {
 	 */
 	private void shutdown() {
 		server.removeHandler(this);
-		server.broadcast("[" + clientName + " has left]");
+		//server.broadcastToAllClients("[" + clientName + " has left]");
 	}
 
 	public String getClientname() {

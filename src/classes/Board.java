@@ -23,7 +23,8 @@ public class Board {
 	// Constructor
 	public Board(int dimension) {
 		this.dimension = dimension;
-
+		this.intersections = new HashMap<Integer, Intersection>();
+		this.groups = new ArrayList<Group>();
 		// Initialize all intersections
 		for (int i = 0; i < this.dimension * this.dimension; i++) {
 			this.intersections.put(i, new Intersection(i, this.dimension));
@@ -355,13 +356,17 @@ public class Board {
 				= adjacentIntersectionsIntersect(intersect);
 			adjacentIntersectionsGroup.addAll(adjacentIntersectionsIntersection);
 		}
+		
+		Set<Intersection> intersectionsToRemove = new HashSet<Intersection>();
 
 		// remove intersections that are already in the group
 		for (Intersection intersect : adjacentIntersectionsGroup) {
 			if (group.containsIntersection(intersect)) {
-				adjacentIntersectionsGroup.remove(intersect);
+				intersectionsToRemove.add(intersect);
 			}
 		}
+		
+		adjacentIntersectionsGroup.removeAll(intersectionsToRemove);
 
 		return adjacentIntersectionsGroup;
 	}
