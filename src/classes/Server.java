@@ -16,56 +16,85 @@ import errors.NotAnIntException;
 import errors.NotYetImplementedException;
 
 public class Server extends Thread {
-	private int port;
 	private Set<ClientHandler> availableClients;
 	private Set<HashSet<ClientHandler>> clientsInGame;
 	private Set<ClientHandler> allClients;
-	//	private Set<Player> playersSet;
 	private ServerSocket ssock;
 	private Set<Game> games;
 	private ClientHandler blackClient;
+	private Board board;
 
+	public static void main(String[] args) 
+			throws InvalidNumberOfArgumentsException, NoValidPortException {
+		print("Starting server...");
+		Server server = new Server();
+		server.start();
+	}
+
+	// Initialization of a new server
 	public Server() {
+		// Scanner to get input from console 
 		Scanner scanner = new Scanner(System.in);
-		System.out.println("Please provide a port: ");
-		try {
-			this.port = scanner.nextInt();
-			System.out.println("Using port " + this.port);
-		} catch (NumberFormatException e) {
-			try {
-				scanner.close();
-				throw new NoValidPortException("Not a valid port!");
-			} catch (NoValidPortException e1) {
-				e1.printStackTrace();
-			}
-		}
+		
+		// Ask for port
+		int port = getPort(scanner);
+		
+		// Open socket
+		openServerSocket(port, scanner);
 
-		boolean loop = true;
-		while (loop) {
-			try {
-
-				this.ssock = new ServerSocket(port);
-				loop = false;
-			} catch (IOException e) {
-				System.out.println("Port is already used!");
-				System.out.println("Please provide a port: ");
-				this.port = scanner.nextInt();
-			}
-		}
+		// Initializing variables
+		// This hashSet holds all available clients,
+		// thus clients who are ready to play a game 
 		this.availableClients = new HashSet<ClientHandler>();
+		
+		// This hashSet hold all clients, thus all clients
+		// that are currently in a game as well as those that are not
 		this.allClients = new HashSet<ClientHandler>();
+		
+		// Done with reading input from console, so closing scanner
 		scanner.close();
 	}
 
+	public int getPort(Scanner scanner) {
+		print("Please provide a port: ");
+		while (true) {
+			String input = scanner.nextLine();
+			try {
+				return Integer.parseInt(input);
+			} catch (NumberFormatException e) {
+				print("Not a valid port, please try again.");
+			}
+		}
+	}
+	public void openServerSocket(int portArg, Scanner scanner) {
+		int port = portArg;
+		while (true) {
+			try {
+				this.ssock = new ServerSocket(port);
+				print("Opened socket on port " + port);
+				break;
+			} catch (IOException e) {
+				print("Port is already used!");
+				port = getPort(scanner);
+			}
+		}
+	}
+	
 	public void run() {
 		int i = 1;
 		while (true) {
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
 			Socket sock;
 			try {
 				if (this.availableClients.size() == 0) {
-					System.out.println("Waiting for client...");
+					print("Waiting for client...");
 				} else {
-					System.out.println("Waiting for another client...");	
+					print("Waiting for another client...");	
 				}
 				sock = this.ssock.accept();
 				ClientHandler handler = new ClientHandler(this, sock, i);
@@ -83,14 +112,13 @@ public class Server extends Thread {
 	}
 
 	public void matchClients() {
-		//clientsInGame = new HashSet<ClientHandler>();
 		clientsInGame = new HashSet<HashSet<ClientHandler>>();
 		HashSet<ClientHandler> clientsInCurrentGame = new HashSet<ClientHandler>();
 		Vector<String> clientNames = new Vector<String>();
 		if (availableClients.size() == 2) {
 			for (ClientHandler handler : availableClients) {
 				clientsInCurrentGame.add(handler);
-				clientNames.add(handler.getClientname());
+				clientNames.add(handler.getClientName());
 			}
 			clientsInGame.add(clientsInCurrentGame);
 			availableClients.removeAll(clientsInCurrentGame);
@@ -108,7 +136,7 @@ public class Server extends Thread {
 		for (String name : clientNames) {
 			i++;
 			if (i == clientNames.size()) {
-				System.out.println(" and " + name + ".");
+				print(" and " + name + ".");
 			} else if (i == clientNames.size() - 1) {
 				System.out.print(name);
 			} else {
@@ -116,27 +144,10 @@ public class Server extends Thread {
 			}
 		}
 		ClientHandler firstClient = getFirstClient(clientsInCurrentGame);
-		Settings settings = null;
 
-
-
-		try {
-			settings = firstClient.getSettings(clientsInCurrentGame.size());
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		Set<Player> currentPlayers = new HashSet<Player>();
-		currentPlayers.add(new OpponentPlayer(firstClient.getClientname(), settings.getColour()));
-		Colour playerColour = settings.getColour();
-		for (ClientHandler handler : clientsInCurrentGame) {
-			if (!handler.equals(firstClient)) {
-				playerColour = playerColour.next();
-				currentPlayers.add(new OpponentPlayer(handler.getClientname(), playerColour));
-			}
-		}
-		Game game = new Game(currentPlayers, settings.getBoardSize());
-		System.out.println("Game created");
-		games.add(game);
+		// request settings
+		firstClient.sendMessageToClient(Protocol.START + Protocol.DELIMITER1 +
+				clientsInCurrentGame.size() + Protocol.DELIMITER1 + Protocol.COMMAND_END);
 	}
 
 	public ClientHandler getFirstClient(HashSet<ClientHandler> clients) {
@@ -174,12 +185,12 @@ public class Server extends Thread {
 	}
 
 	public void handleMessage(String msg, ClientHandler handler) {
-		System.out.println(String.format("Message recieved :%s. From ", msg, handler.getName()));
+		print(String.format("Message recieved :%s. From ", msg, handler.getClientName()));
 		String[] split = msg.split(Protocol.DELIMITER1);
 		if (split[0].equals(Protocol.SETTINGS)) {
 			try {
 				int boardSize = Integer.parseInt(split[2]);
-				System.out.println(String.format("Board size is : %s", boardSize));
+				print(String.format("Board size is : %s", boardSize));
 				Colour colour = Colour.getColour(split[1]);
 				handleSettings(boardSize, handler, colour);
 			} catch (NumberFormatException e) {
@@ -197,14 +208,46 @@ public class Server extends Thread {
 					e1.printStackTrace();
 				}
 			}
+		} else if (split[0].equals(Protocol.MOVE)) {
+			processMove(split, msg, handler);
 		}
 
 	}
-
+	// CASE MOVE row_column
+	public void processMove(String[] split, String msg, ClientHandler handler) {
+		String playerWhoMadeMove = handler.getClientName();
+		Set<ClientHandler> clientsInThisGame = getClientsInMyGame(handler);
+		
+		String move = split[1];
+		// Check for pass
+		if (!move.equals(Protocol.PASS)) {
+			String[] moveArray = move.split(Protocol.DELIMITER2);
+			int row = Integer.parseInt(moveArray[0]);
+			int col = Integer.parseInt(moveArray[1]);		
+			processMoveLocally(row, col);
+		}
+		communicateMove(move, handler);
+	}
+	
+	public void processMoveLocally(int col, int row) {
+		
+	}
+	
+	public void communicateMove(String move, ClientHandler clientWhoMadeMove) {
+		Set<ClientHandler> clientsInThisGame = getClientsInMyGame(clientWhoMadeMove);
+		int numberOfClientWhoMadeMove = clientWhoMadeMove.getNumber();
+		
+		
+		for (ClientHandler handler : clientsInThisGame) {
+			
+		}
+	}
+	
 	// handler = first player!
 	public void handleSettings(int boardSize, ClientHandler handler, Colour firstColour) {
 		Colour secondColour = null;
 		Set<ClientHandler> clientsInMyGame = getClientsInMyGame(handler);
+	
 		Set<Player> players = new HashSet<Player>();
 		if (firstColour.equals(Colour.BLACK)) {
 			secondColour = Colour.WHITE;
@@ -214,34 +257,41 @@ public class Server extends Thread {
 		}
 		if (clientsInMyGame.size() == 2) {
 			for (ClientHandler clientInGame : clientsInMyGame) {
-
-
-
 				if (clientInGame.equals(handler)) {
-					Player player = new OpponentPlayer(clientInGame.getClientname(), firstColour);
+					Player player = new OpponentPlayer(clientInGame.getClientName(), firstColour);
 					players.add(player);	
 					if (firstColour.equals(Colour.BLACK)) {
 						blackClient = clientInGame;
 					}
 				} else {
-					clientInGame.sendMessageToClient(Protocol.START + Protocol.DELIMITER1 + 
-							clientsInMyGame.size() +
-							Protocol.DELIMITER1 + secondColour.toString() + Protocol.DELIMITER1 + 
-							boardSize + Protocol.DELIMITER1 + handler.getClientname() + 
-							Protocol.DELIMITER1 + clientInGame.getClientname() + 
-							Protocol.DELIMITER1 + Protocol.COMMAND_END);
-					Player player = new OpponentPlayer(clientInGame.getClientname(), secondColour);
+					Player player = new OpponentPlayer(clientInGame.getClientName(), secondColour);
 					players.add(player);
 					if (secondColour.equals(Colour.BLACK)) {
 						blackClient = clientInGame;
 					}
 				}
 			}
+			
+			String stringToSend = Protocol.START + Protocol.DELIMITER1 + 
+					clientsInMyGame.size() +
+					Protocol.DELIMITER1 + secondColour.toString() + Protocol.DELIMITER1 + 
+					boardSize + Protocol.DELIMITER1;
+			
+			Set<String> playerNames = new HashSet<String>();
+			for (ClientHandler handlerToAdd : clientsInMyGame) {
+				playerNames.add(handlerToAdd.getClientName());
+				stringToSend = stringToSend + handlerToAdd.getClientName() + Protocol.DELIMITER1;
+			}
+			
+			stringToSend = stringToSend + Protocol.COMMAND_END;
+			broadcastToSetOfClients(stringToSend, clientsInMyGame);
 
-			broadcastToSetOfClients(Protocol.TURN + Protocol.DELIMITER1 + blackClient.getClientname()
-			+ Protocol.DELIMITER1 + Protocol.FIRST + Protocol.DELIMITER1 + blackClient.getClientname() + Protocol.DELIMITER1 + Protocol.COMMAND_END, clientsInMyGame);
+			board = new Board(boardSize);
+			
+			broadcastToSetOfClients(Protocol.TURN + Protocol.DELIMITER1 + blackClient.getClientName()
+			+ Protocol.DELIMITER1 + Protocol.FIRST + Protocol.DELIMITER1 + blackClient.getClientName() + Protocol.DELIMITER1 + Protocol.COMMAND_END, clientsInMyGame);
 
-			startGame(players, boardSize);
+//			startGame(players, boardSize);
 
 		} else {
 			try {
@@ -255,7 +305,7 @@ public class Server extends Thread {
 
 	}
 
-	public void print(String msg) {
+	public static void print(String msg) {
 		System.out.println(msg);
 	}
 
@@ -273,12 +323,5 @@ public class Server extends Thread {
 		//gogui.startGUI();
 		gogui.setBoardSize(boardSize);
 		new Game(playersSet, boardSize, gogui);
-	}
-
-	public static void main(String[] args) 
-			throws InvalidNumberOfArgumentsException, NoValidPortException {
-		System.out.println("Starting server...");
-		Server server = new Server();
-		server.start();
 	}
 }

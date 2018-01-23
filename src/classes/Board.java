@@ -31,7 +31,7 @@ public class Board {
 		}
 
 		score = new HashMap<Colour, Integer>();
-
+		boardSituations = new ArrayList<Map<Integer, Colour>>();
 		// Black is the first one to move, so white is set as lastMove by default
 		lastMove = Colour.WHITE;
 		score.put(lastMove, 0);
@@ -191,7 +191,6 @@ public class Board {
 				adjacentIntersects.addAll(
 						adjacentIntersectionsSetWithEqualColour(adjacentIntersects));
 			}
-
 			// do any of these intersections belong to a group?
 			Group group = getGroupOfSetOfIntersections(adjacentIntersects);
 			if (group != null) {
@@ -228,7 +227,7 @@ public class Board {
 					}
 				}
 			}
-			colourToCheck = lastMove.next();
+			colourToCheck = colourToCheck.next();
 		}
 	}
 
@@ -420,11 +419,12 @@ public class Board {
 	public Set<Intersection> adjecentIntersectionsIntersectWithEqualColour(Intersection intersect) {
 		Colour colour = intersect.getColour();
 		Set<Intersection> intersectionsLocal = adjacentIntersectionsIntersect(intersect);
+		Set<Intersection> intersectsToReturn = new HashSet<Intersection>();
 		for (Intersection intersectToCheck : intersectionsLocal) {
 			if (!intersectToCheck.getColour().equals(colour)) {
-				intersectionsLocal.remove(intersectToCheck);
+				intersectsToReturn.add(intersectToCheck);
 			}
 		}
-		return intersectionsLocal;
+		return intersectsToReturn;
 	}
 }

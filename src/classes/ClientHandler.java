@@ -7,8 +7,6 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
 
-import errors.InvalidColourException;
-import errors.InvalidCommandException;
 import errors.NotYetImplementedException;
 import errors.VersionsDoNotMatchException;
 
@@ -50,7 +48,8 @@ public class ClientHandler extends Thread {
 		}
 		if (!split[3].equals(Protocol.VERSIONNUMBER)) {
 			try {
-				throw new VersionsDoNotMatchException(String.format("Versions do not match! Recieved message: %s", msg));
+				throw new VersionsDoNotMatchException(String.format(
+						"Versions do not match! Recieved message: %s", msg));
 			} catch (VersionsDoNotMatchException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -68,31 +67,7 @@ public class ClientHandler extends Thread {
 		}
 	}
 	
-	public Settings getSettings(int size) throws IOException {
-		sendMessageToClient(Protocol.START + Protocol.DELIMITER1 +
-				size + Protocol.DELIMITER1 + Protocol.COMMAND_END);
-		System.out.println("Start reading");
-		String[] split = in.readLine().split(Protocol.DELIMITER1);
-		System.out.println("Stop reading");
-		if (!split[0].equals(Protocol.SETTINGS)) {
-			try {
-				throw new InvalidCommandException("Unexpected command!");
-			} catch (InvalidCommandException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}
-		Settings settings = null;
-		try {
-			settings = new Settings(Integer.parseInt(split[2]), Colour.getColour(split[1]));
-			System.out.println("Recieved settings");
-		} catch (InvalidColourException e) {
-			e.printStackTrace();
-		}
-		return settings;
-	}
-
-	/**
+		/**
 	 * This method takes care of sending messages from the Client.
 	 * Every message that is received, is preprended with the name
 	 * of the Client, and the new message is offered to the Server
@@ -103,14 +78,14 @@ public class ClientHandler extends Thread {
 	public void run() {
 		try {
 			String msg = in.readLine();
-			while (msg != null) {
-				server.handleMessage(msg, this);;
+			while (true) {
+				Thread.sleep(1000);
+				server.handleMessage(msg, this);
 				msg = in.readLine();
 				System.out.println("Message recieved");
 				System.out.println(msg);
 			}
-			shutdown();
-		} catch (IOException e) {
+		} catch (IOException | InterruptedException e) {
 			shutdown();
 		}
 	}
@@ -123,17 +98,13 @@ public class ClientHandler extends Thread {
 	 */
 	public void sendMessageToClient(String msg) {
 		try {
-			System.out.println(String.format("Sending message to client: %s", msg)); 
+			System.out.println(String.format("Sending message to %s: %s", clientName, msg)); 
 			out.write(msg);
 			out.newLine();
 			out.flush();
 		} catch (IOException e) {
 			shutdown();
 		}
-	}
-	
-	public void sendMessageToServer(String msg) {
-		server.handleMessage(msg, this);
 	}
 	
 	/**
@@ -146,7 +117,7 @@ public class ClientHandler extends Thread {
 		//server.broadcastToAllClients("[" + clientName + " has left]");
 	}
 
-	public String getClientname() {
+	public String getClientName() {
 		return clientName;
 	}
 }
