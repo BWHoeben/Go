@@ -87,16 +87,13 @@ public class ClientHandler extends Thread {
 	public void run() {
 		try {
 			String msg = in.readLine();
-			while (true) {
-				Thread.sleep(1000);
-				if (msg != null) {
-					server.handleMessage(msg, this);
-				}
+			while (msg != null) {
+				server.handleMessage(msg, this);
 				msg = in.readLine();
 				System.out.println("Message recieved");
 				System.out.println(msg);
 			}
-		} catch (IOException | InterruptedException e) {
+		} catch (IOException e) {
 			shutdown();
 		}
 	}

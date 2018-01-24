@@ -138,7 +138,6 @@ public class Board {
 				returnSet.add(entry.getKey());
 			}
 		}
-
 		return returnSet;
 	}
 

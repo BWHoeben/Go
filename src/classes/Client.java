@@ -51,8 +51,8 @@ public class Client extends Thread {
 		//askForInput();
 		try {
 			useDefaultInput();
+
 		} catch (UnknownHostException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
@@ -178,14 +178,8 @@ public class Client extends Thread {
 	public void run() {
 		try {
 			String msg = in.readLine();
-			while (true) {
+			while (msg != null) {
 				print(String.format("Message recieved: %s", msg));	
-				try {
-					Thread.sleep(1000);
-				} catch (InterruptedException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
 				try {
 					handleMessage(msg);
 				} catch (InvalidCommandException | NotAnIntException e) {
@@ -200,9 +194,7 @@ public class Client extends Thread {
 			shutdown();
 		}
 	}
-
 	public void handleMessage(String msg) throws InvalidCommandException, NotAnIntException {
-		print(String.format("Handling message: %s", msg));
 		String[] splitString = trimEndCommand(msg.split(Protocol.DELIMITER1), msg);
 
 		if (splitString[0].equals(Protocol.START)) {
@@ -210,7 +202,7 @@ public class Client extends Thread {
 		} else if (splitString[0].equals(Protocol.TURN)) {
 			handleMessageTurn(splitString, msg);
 		} else if (splitString[0].equals(Protocol.ENDGAME)) {
-			handleMessageStart(splitString, msg);
+			handleMessageEndGame(splitString, msg);
 		} else {
 			throw new InvalidCommandException(String.format(
 					"Server provided unkown arguments. Recieved message: %s", msg));
@@ -390,29 +382,46 @@ public class Client extends Thread {
 		Player playerToMakeMove = getPlayer(split[3]);
 
 		// opponent passed
-		if (split[2].equals(Protocol.PASS)) {
+		if (split[2].equals(Protocol.PASS) && !split[1].equals(clientPlayer.getName())) {
 			if (playerWhoJustHadATurn.getLastMoveWasPass()) {
-				try {
-					throw new AlreadyPassedException("Player already passed last time!");
-				} catch (AlreadyPassedException e) {
-					e.printStackTrace();
-				}	
+				//	try {
+				//		throw new AlreadyPassedException("Player already passed last time!");
+				//	} catch (AlreadyPassedException e) {
+				//		e.printStackTrace();
+				//	}
+				print(playerWhoJustHadATurn.getName() + " passed two times in a row!");	
 			}
 			playerWhoJustHadATurn.pass(true);
 
 
 		} else if (!split[2].equals(Protocol.FIRST) && !split[1].equals(clientPlayer.getName())) {
 			print("Processing opponents move");
-			int move = getMove(split[2]);
-			board.setIntersection(move, playerWhoJustHadATurn.getColour());
+			Move move;
+			try {
+				move = new Move(split[2], boardSize, this.clientColour);
+				board.setIntersection(move.getIndex(), playerWhoJustHadATurn.getColour());
+			} catch (InvalidCoordinateException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 		} 
-		
+
 		if (playerToMakeMove.getName().equals(this.clientPlayer.getName())) { 
-			int moveToMake = playerToMakeMove.determineMove(board);
-			board.setIntersection(moveToMake, playerToMakeMove.getColour());
-			String move = indexToMove(moveToMake);
-			send(Protocol.MOVE + Protocol.DELIMITER1 + move + 
-					Protocol.DELIMITER1 + Protocol.COMMAND_END);
+			Move moveToMake = playerToMakeMove.determineMove(board);
+
+			if (moveToMake.getQuit()) {
+				send(Protocol.QUIT + Protocol.DELIMITER1 + Protocol.COMMAND_END);
+			} else {
+				String move = null;
+				if (moveToMake.getPass()) {
+					move = "PASS";
+				} else {
+					move = moveToMake.toString();
+					board.setIntersection(moveToMake.getIndex(), playerToMakeMove.getColour());
+				}
+				send(Protocol.MOVE + Protocol.DELIMITER1 + move + 
+						Protocol.DELIMITER1 + Protocol.COMMAND_END);
+			}
 		} else {
 			print("Waiting for opponent to make a move");
 		}
@@ -445,9 +454,13 @@ public class Client extends Thread {
 
 			Map<Player, Integer> playersToCheck = new HashMap<Player, Integer>(); 	 
 			checkScores(playersToCheck, board);
-			print(String.format(
+			if (split[3].equals(split[5])) {
+				print("It's a draw!");
+			} else {
+				print(String.format(
 					"%s won with a score of %s, %s lost with a score of %s",
-					split[3], split[4], split[5], split[6]));
+					split[2], split[3], split[4], split[5]));
+			}
 			endGame();
 		} else {
 			try {
@@ -536,29 +549,6 @@ public class Client extends Thread {
 		return index % this.boardSize;
 	}
 
-	public int getMove(String move) {
-		String[] moveArray = move.split(Protocol.DELIMITER2);
-		if (moveArray.length != 2) {
-			try {
-				throw new InvalidCoordinateException("Provided coordinates were not valid!");
-			} catch (InvalidCoordinateException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}
-		try {
-			return calculateIndex(Integer.parseInt(moveArray[1]),
-					Integer.parseInt(moveArray[0]), this.boardSize);
-		} catch (NumberFormatException e) {
-			try {
-				throw new InvalidCoordinateException("Provided coordinates were not valid!");
-			} catch (InvalidCoordinateException e1) {
-				e1.printStackTrace();
-			}
-		}
-		return -1000;
-	}
-
 	public int calculateIndex(int col, int row, int dimensionOfBoard) {
 		return (row * dimensionOfBoard) + col;
 	}
@@ -630,13 +620,13 @@ public class Client extends Thread {
 		while (true) {
 			try {
 				this.boardSize = Integer.parseInt(SCANNER.nextLine());
-				if (this.boardSize > 0 && this.boardSize < 100) {
+				if (this.boardSize > 1 && this.boardSize < 100) {
 					break;
 				}
-				print("Board size should be a postive integer "
-						+ "smaller than 100. Please try again.");
+				print("Board size should be a integer bigger than one and"
+						+ "smaller than hundred. Please try again.");
 			} catch (NumberFormatException e) {
-				throw new NotAnIntException("You did not enter a valid integer!");
+				print("You did not enter a valid integer. Please try again.");
 			}
 		}
 		send(Protocol.SETTINGS + Protocol.DELIMITER1 + clientColour.toString() + 
@@ -657,7 +647,6 @@ public class Client extends Thread {
 	}
 
 	public void shutdown() {
-		send(Protocol.QUIT + Protocol.DELIMITER1 + Protocol.COMMAND_END);
 		print("Closing socket connection...");
 		try {
 			sock.close();

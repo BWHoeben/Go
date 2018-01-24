@@ -21,12 +21,18 @@ public class ComputerPlayer extends Player implements Strategy {
 	}
 	
 	@Override
-	public int determineMove(Board board) {
+	public Move determineMove(Board board) {
 		return determineMove(board, this.colour);
 	}
 	
+	public Move determineMove(Board board, Colour colourArg) {
+		int index = strategy.determineMoveUsingStrategy(board, colourArg);
+		return new Move(index, board.getDimension(), colourArg);
+	}
+
 	@Override
-	public int determineMove(Board board, Colour colourArg) {
-		return strategy.determineMove(board, colourArg);
+	public int determineMoveUsingStrategy(Board board, Colour state) {
+		// TODO Auto-generated method stub
+		return 0;
 	}
 }

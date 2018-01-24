@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -14,6 +15,7 @@ import java.util.Vector;
 
 import GUI.GoGUIIntegrator;
 import errors.InvalidColourException;
+import errors.InvalidCoordinateException;
 import errors.InvalidNumberOfArgumentsException;
 import errors.NoValidPortException;
 import errors.NotAnIntException;
@@ -57,7 +59,7 @@ public class Server extends Thread {
 		this.allClients = new HashMap<Integer, ClientHandler>();
 
 		this.clientBoardCombinations = new HashMap<ClientHandler, Board>();
-		
+		this.clientsInGame = new HashSet<HashSet<ClientHandler>>();
 		// Done with reading input from console, so closing scanner
 		scanner.close();
 	}
@@ -90,12 +92,6 @@ public class Server extends Thread {
 	public void run() {
 		int i = 1;
 		while (true) {
-			try {
-				Thread.sleep(1000);
-			} catch (InterruptedException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-			}
 			Socket sock;
 			try {
 				if (this.availableClients.size() == 0) {
@@ -119,7 +115,6 @@ public class Server extends Thread {
 	}
 
 	public void matchClients() {
-		clientsInGame = new HashSet<HashSet<ClientHandler>>();
 		HashSet<ClientHandler> clientsInCurrentGame = new HashSet<ClientHandler>();
 		Vector<String> clientNames = new Vector<String>();
 		if (availableClients.size() == 2) {
@@ -192,12 +187,11 @@ public class Server extends Thread {
 	}
 
 	public void handleMessage(String msg, ClientHandler handler) {
-		print(String.format("Message recieved :%s. From ", msg, handler.getClientName()));
+		print(String.format("Message recieved :%s. From %s", msg, handler.getClientName()));
 		String[] split = msg.split(Protocol.DELIMITER1);
 		if (split[0].equals(Protocol.SETTINGS)) {
 			try {
 				int boardSize = Integer.parseInt(split[2]);
-				print(String.format("Board size is : %s", boardSize));
 				Colour colour = Colour.getColour(split[1]);
 				handleSettings(boardSize, handler, colour);
 			} catch (NumberFormatException e) {
@@ -217,21 +211,80 @@ public class Server extends Thread {
 			}
 		} else if (split[0].equals(Protocol.MOVE)) {
 			processMove(split, msg, handler);
+		} else if (split[0].equals(Protocol.QUIT)) {
+			handleQuit(handler);
 		}
-
 	}
+
+	public void handleQuit(ClientHandler handler) {
+		print(handler.getClientName() + " has quit");
+		Set<ClientHandler> clientsInMyGame = getClientsInMyGame(handler);
+		if (clientsInMyGame.size() == 2) {
+			endGame(handler, Protocol.ABORTED);
+		} else {
+			try {
+				throw new NotYetImplementedException("not yet implemented");
+			} catch (NotYetImplementedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+	}
+
+	public void endGame(ClientHandler handler, String reason) {
+		String stringToSend = Protocol.ENDGAME + Protocol.DELIMITER1 + reason + Protocol.DELIMITER1;
+		Set<ClientHandler> clientsInMyGame = getClientsInMyGame(handler);
+		Map<Colour, Integer> scores = getBoardOfClient(handler).getScore();
+		Map<ClientHandler, Integer> clientScores = new HashMap<ClientHandler, Integer>();
+		assert clientsInMyGame.size() == scores.size();
+		int score = 0;
+		for (ClientHandler clientInGame : clientsInMyGame) {
+			score = scores.get(clientInGame.getColour());
+			clientScores.put(clientInGame, score);
+		}
+				
+		for (int i = 0; i < clientsInMyGame.size(); i++) {
+			ClientHandler clientWithMaxScore = getClientWithHighestScore(clientScores);
+			stringToSend = stringToSend + clientWithMaxScore.getClientName() 
+				+ Protocol.DELIMITER1 + clientScores.get(clientWithMaxScore) + Protocol.DELIMITER1;
+			clientScores.remove(clientWithMaxScore);
+			
+		}
+		broadcastToSetOfClients(stringToSend + Protocol.COMMAND_END, clientsInMyGame);
+	}
+	
+	public ClientHandler getClientWithHighestScore(Map<ClientHandler, Integer> clientScores) {
+		int max = 0;
+		ClientHandler maxClient = null;
+		for (Map.Entry<ClientHandler, Integer> entry : clientScores.entrySet()) {
+			if (entry.getValue() >= max) {
+				max = entry.getValue();
+				maxClient = entry.getKey();
+			}
+		}
+		return maxClient;
+	}
+
 	// CASE MOVE row_column
 	public void processMove(String[] split, String msg, ClientHandler handler) {
 		//String playerWhoMadeMove = handler.getClientName();
 		//Set<ClientHandler> clientsInThisGame = getClientsInMyGame(handler);
 		Boolean gameOver = false;
 		Board board = getBoardOfClient(handler);
-		Move move = new Move(split[1], board.getDimension(), handler.getColour());
-		
-		// Check for pass
-		if (move != null) {
+		Move move = null;
+		if (split[1].equals(Protocol.PASS)) {
+			print(handler.getClientName() + " passed.");
+			System.out.println("Todo: insert check for subsequent passes!");
+		} else {
+			try {
+				move = new Move(split[1], board.getDimension(), handler.getColour());
+			} catch (InvalidCoordinateException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
 			gameOver = processMoveLocally(move.getIndex(), handler.getColour(), board);
 		}
+		// Check for pass
 		if (!gameOver) {
 			communicateMove(move, handler);
 		} else {
@@ -243,7 +296,7 @@ public class Server extends Thread {
 		board.setIntersection(index, colour);
 		return board.gameOver();
 	}
-	
+
 	public Board getBoardOfClient(ClientHandler handler) {
 		return clientBoardCombinations.get(handler);
 	}
@@ -259,12 +312,17 @@ public class Server extends Thread {
 
 		int numberOfNextClient = getNextNumberOfList(
 				numbersOfClientsInThisGame, numberOfClientWhoMadeMove);
-		
+
 		ClientHandler nextClient = allClients.get(numberOfNextClient);
-		
+		String moveAsString  = null;
+		if (move != null) {
+			moveAsString = move.toString();
+		} else {
+			moveAsString = Protocol.PASS;
+		}
 		String stringToSend = Protocol.TURN + Protocol.DELIMITER1 + clientWhoMadeMove.getClientName() +
-				Protocol.DELIMITER1 + move.getMoveAsString() + Protocol.DELIMITER1 + nextClient.getClientName() + Protocol.DELIMITER1 + Protocol.COMMAND_END;
-		
+				Protocol.DELIMITER1 + moveAsString + Protocol.DELIMITER1 + nextClient.getClientName() + Protocol.DELIMITER1 + Protocol.COMMAND_END;
+
 		broadcastToSetOfClients(stringToSend, clientsInThisGame);
 	}
 
@@ -280,7 +338,6 @@ public class Server extends Thread {
 		}
 		return getMinimumValueFromList(list);
 	}
-
 
 	public int getMinimumValueFromList(List<Integer> list) {
 		return list.stream().reduce(Integer::min).get();
@@ -332,21 +389,19 @@ public class Server extends Thread {
 			broadcastToSetOfClients(stringToSend, clientsInMyGame);
 
 			Board board = new Board(boardSize, clientsInMyGame.size());
-			
+
 			for (ClientHandler clientInGame : clientsInMyGame) {
 				clientBoardCombinations.put(clientInGame, board);
 			}
-			
-			broadcastToSetOfClients(Protocol.TURN + Protocol.DELIMITER1 + blackClient.getClientName()
-			+ Protocol.DELIMITER1 + Protocol.FIRST + Protocol.DELIMITER1 + blackClient.getClientName() + Protocol.DELIMITER1 + Protocol.COMMAND_END, clientsInMyGame);
 
-			//			startGame(players, boardSize);
-
+			broadcastToSetOfClients(Protocol.TURN + Protocol.DELIMITER1 + 
+					blackClient.getClientName() 	+ Protocol.DELIMITER1 + 
+					Protocol.FIRST + Protocol.DELIMITER1 + blackClient.getClientName()
+					+ Protocol.DELIMITER1 + Protocol.COMMAND_END, clientsInMyGame);
 		} else {
 			try {
 				throw new NotYetImplementedException("Not yet implemented");
 			} catch (NotYetImplementedException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 		}
