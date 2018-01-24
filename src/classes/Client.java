@@ -243,19 +243,19 @@ public class Client extends Thread {
 
 			// Case Start <number of players> <colour of this client> <boardsize> <player1> <player2> (3 etc.) to all players 
 		} else if (split.length > 2) {
-			
+
 			// the other client decided on the game settings, lets implement them
 			if (!firstToConnect) {
 				implementSettings(split, msg);
 				print("Settings implemented.");
 			}
-			
+
 			// implements all the players (add them to this.players)
 			implementPlayers(split, msg);
 			print("Players implemented.");
-			
+
 			// create a new board
-			this.board = new Board(boardSize);
+			this.board = new Board(boardSize, numberOfPlayers);
 			print("Board generated");
 		}
 	}
@@ -270,16 +270,11 @@ public class Client extends Thread {
 		}
 		this.boardSize = Integer.parseInt(split[3]);
 	}
-	
+
 	public void implementPlayers(String[] split, String msg) {
 		String[] playerNames = Arrays.copyOfRange(split, 4, split.length);
 		if (playerNames.length == 2) {
-			Colour opponentColour = null;
-			if (this.clientColour.equals(Colour.BLACK)) {
-				opponentColour = Colour.WHITE;
-			} else {
-				opponentColour = Colour.BLACK;
-			}
+			Colour opponentColour = clientColour.next(numberOfPlayers);
 			for (int i = 0; i < playerNames.length; i++) {
 				if (playerNames[i].equals(getClientName())) {
 					players.add(generateClientPlayer(clientColour));
@@ -296,7 +291,7 @@ public class Client extends Thread {
 			}
 		}
 	}
-	
+
 	public void setupGame(String[] stringArray) 
 			throws NotAnIntException, NotYetImplementedException {
 		if (stringArray.length <= 5) {
@@ -319,7 +314,7 @@ public class Client extends Thread {
 			e.printStackTrace();
 		}	
 		try {
-			if (!Colour.getColour(stringArray[2]).equals(clientPlayer.getColour())) {
+			if (!Colour.getColour(stringArray[2]).equals(this.clientPlayer.getColour())) {
 				throw new InvalidColourException(
 						"Colour provided by server was not equal to client's colour");
 			}
@@ -354,7 +349,7 @@ public class Client extends Thread {
 			} else {
 				opponentName = namesOfPlayers[0];
 			}
-			if (clientPlayer.getColour().equals(Colour.BLACK)) {
+			if (this.clientPlayer.getColour().equals(Colour.BLACK)) {
 				opponentColour = Colour.WHITE;
 			} else {
 				opponentColour = Colour.BLACK;
@@ -381,7 +376,7 @@ public class Client extends Thread {
 				e.printStackTrace();
 			}
 		}
-		
+
 		// incorrect arguments provided, a TURN-message should be 4 arguments
 		if (split.length != 4) {
 			try {
@@ -396,6 +391,9 @@ public class Client extends Thread {
 		Player playerWhoJustHadATurn = getPlayer(split[1]);
 		Player playerToMakeMove = getPlayer(split[3]);
 
+		print(String.format("Player who just had a move: %s", playerWhoJustHadATurn.getName()));
+		print(String.format("Player to make a move: %s", playerToMakeMove.getName()));
+		print(String.format("Client player: %s",  this.clientPlayer.getName()));
 		// opponent passed
 		if (split[2].equals(Protocol.PASS)) {
 			if (playerWhoJustHadATurn.getLastMoveWasPass()) {
@@ -413,7 +411,8 @@ public class Client extends Thread {
 			int move = getMove(split[2]);
 			board.setIntersection(move, playerWhoJustHadATurn.getColour());
 		} 
-		if (playerToMakeMove.equals(clientPlayer)) { 
+		
+		if (playerToMakeMove.getName().equals(this.clientPlayer.getName())) { 
 			print("Asking player to make a move");
 			int moveToMake = playerToMakeMove.determineMove(board);
 			board.setIntersection(moveToMake, playerToMakeMove.getColour());
@@ -536,7 +535,7 @@ public class Client extends Thread {
 	}
 
 	public int indexToCol(int index) {
-		return index - (index % this.boardSize);
+		return index - ((index % this.boardSize) * boardSize);
 	}
 
 	public int indexToRow(int index) {
@@ -593,57 +592,6 @@ public class Client extends Thread {
 		return false;
 	}
 
-	public void prepareGame(String[] stringArray) 
-			throws NameException, NotAnIntException, NotYetImplementedException {
-		//int boardDimension;
-		try {
-			this.numberOfPlayers = Integer.parseInt(stringArray[1]);
-			//	boardDimension = Integer.parseInt(stringArray[3]);
-		} catch (NumberFormatException e) {
-			throw new NotAnIntException(
-					"One or more arguments that should have been integers weren't");
-		}
-
-		if (numberOfPlayers == 2) {
-			Colour colour = null;
-			try {
-				colour = Colour.getColour(stringArray[2]);
-			} catch (InvalidColourException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			this.clientPlayer = generateClientPlayer(colour);
-			String[] names = new String[2];
-			String opponentName = null;
-			names[0] = stringArray[4];
-			names[1] = stringArray[5];
-			if (names[0].equals(names[1])) {
-				throw new NameException(String.format(
-						"Players must have different names! Both names are %s", names[0]));
-			} else if (names[0].equals(name)) {
-				opponentName = names[1];
-			} else if (names[1].equals(name)) {
-				opponentName = names[0];
-			} else {
-				throw new NameException(String.format(
-						"Server provided incorrect names. This client's name is %s."
-								+ " Server provided %s and %s", this.name, names[0], names[1])); 
-			}
-
-			Player opponentPlayer = null;
-
-			if (colour.equals(Colour.BLACK)) {
-				opponentPlayer = new OpponentPlayer(opponentName, Colour.WHITE);		
-			} else {
-				opponentPlayer = new OpponentPlayer(opponentName, Colour.BLACK);
-			} 
-			players.add(opponentPlayer);
-			players.add(this.clientPlayer);
-		} else {
-			throw new NotYetImplementedException("MULTIPLE PLAYERS IS NOT YET IMPLEMENTED!");
-		}
-	}
-
 	public Player generateClientPlayer(Colour colour) {
 		if (Client.isHuman) {
 			return new HumanPlayer(this.name, colour);
@@ -665,20 +613,18 @@ public class Client extends Thread {
 		print("Please choose a colour! available options:");
 		print(colour.first().toString());
 		for (int i = 0; i < numberOfPlayersArg - 1; i++) {
-			colour = colour.next();
+			colour = colour.next(numberOfPlayersArg);
 			print(colour.toString());
 		}
 		colour = colour.first();
 
 		String colourString = "";
-		
+
 		while (true) {
 			try {
 				if (SCANNER.hasNextLine()) {
 					colourString = SCANNER.nextLine(); //Should be a blocking call
 					this.clientColour = Colour.getColour(colourString.toUpperCase());
-					this.clientPlayer = generateClientPlayer(this.clientColour);
-					players.add(clientPlayer);
 					print(String.format("You choose %s", this.clientColour));
 					break;
 				} 
@@ -733,7 +679,7 @@ public class Client extends Thread {
 	public static void print(String msg) {
 		System.out.println(msg);
 	}
-	
+
 	public void printArray(String[] array) {
 		for (int i = 0; i < array.length; i++) {
 			print(array[i]);

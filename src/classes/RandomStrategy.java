@@ -11,7 +11,7 @@ public class RandomStrategy implements Strategy {
 
 	@Override
 	public int determineMove(Board board, Colour colour) {
-		Set<Integer> emptyIntersects = board.getValidMoves();
+		Set<Integer> emptyIntersects = board.getValidMoves(colour);
 		int intersectToReturn = (int) Math.floor(Math.random() * emptyIntersects.size());
 		int i = 0;
 		for (int intersect : emptyIntersects) {

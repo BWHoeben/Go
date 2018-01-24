@@ -9,14 +9,40 @@ public enum Colour {
 		return BLACK;
 	}
 
-	public Colour next() {
-		switch (this) {
-			case BLACK : return WHITE;
-			case WHITE : return ORANGE;
-			case ORANGE : return PINK;
-			case PINK : return BLACK;
-			default : return null;
+	//public Colour next() {
+	//	switch (this) {
+	//		case BLACK : return WHITE;
+	//		case WHITE : return ORANGE;
+	//		case ORANGE : return PINK;
+	//		case PINK : return BLACK;
+	//		default : return null;
+	//	}
+	//}
+
+	public Colour next(int numberOfPlayers) {
+		if (numberOfPlayers == 2) {
+			switch (this) {
+				case BLACK : return WHITE;
+				case WHITE : return BLACK;
+				default : return null;
+			}
+		} else if (numberOfPlayers == 3) {
+			switch (this) {
+				case BLACK : return WHITE;
+				case WHITE : return ORANGE;
+				case ORANGE : return BLACK;
+				default : return null;
+			}
+		} else if (numberOfPlayers == 4) {
+			switch (this) {
+				case BLACK : return WHITE;
+				case WHITE : return ORANGE;
+				case ORANGE : return PINK;
+				case PINK : return BLACK;
+				default : return null;
+			}	
 		}
+		return null;
 	}
 
 	public String toString() {
@@ -33,7 +59,7 @@ public enum Colour {
 	public static Colour getColour(String colourString) throws InvalidColourException {
 		Colour colour = Colour.BLACK;
 		while (!colour.toString().equals(colourString)) {
-			colour = colour.next();
+			colour = colour.next(4);
 			if (colour.equals(colour.first())) {
 				throw new InvalidColourException("Invalid/Unkown colour!");
 			}

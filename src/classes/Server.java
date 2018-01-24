@@ -3,7 +3,11 @@ package classes;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
 import java.util.Vector;
@@ -18,7 +22,7 @@ import errors.NotYetImplementedException;
 public class Server extends Thread {
 	private Set<ClientHandler> availableClients;
 	private Set<HashSet<ClientHandler>> clientsInGame;
-	private Set<ClientHandler> allClients;
+	private Map<Integer, ClientHandler> allClients;
 	private ServerSocket ssock;
 	private Set<Game> games;
 	private ClientHandler blackClient;
@@ -35,10 +39,10 @@ public class Server extends Thread {
 	public Server() {
 		// Scanner to get input from console 
 		Scanner scanner = new Scanner(System.in);
-		
+
 		// Ask for port
 		int port = getPort(scanner);
-		
+
 		// Open socket
 		openServerSocket(port, scanner);
 
@@ -46,11 +50,11 @@ public class Server extends Thread {
 		// This hashSet holds all available clients,
 		// thus clients who are ready to play a game 
 		this.availableClients = new HashSet<ClientHandler>();
-		
+
 		// This hashSet hold all clients, thus all clients
 		// that are currently in a game as well as those that are not
-		this.allClients = new HashSet<ClientHandler>();
-		
+		this.allClients = new HashMap<Integer, ClientHandler>();
+
 		// Done with reading input from console, so closing scanner
 		scanner.close();
 	}
@@ -79,7 +83,7 @@ public class Server extends Thread {
 			}
 		}
 	}
-	
+
 	public void run() {
 		int i = 1;
 		while (true) {
@@ -217,37 +221,76 @@ public class Server extends Thread {
 	public void processMove(String[] split, String msg, ClientHandler handler) {
 		String playerWhoMadeMove = handler.getClientName();
 		Set<ClientHandler> clientsInThisGame = getClientsInMyGame(handler);
-		
+		Boolean gameOver = false;
 		String move = split[1];
 		// Check for pass
 		if (!move.equals(Protocol.PASS)) {
-			String[] moveArray = move.split(Protocol.DELIMITER2);
-			int row = Integer.parseInt(moveArray[0]);
-			int col = Integer.parseInt(moveArray[1]);		
-			processMoveLocally(row, col);
+			gameOver = processMoveLocally(moveToIndex(move), handler.getColour());
 		}
-		communicateMove(move, handler);
+		if (!gameOver) {
+			communicateMove(move, handler);
+		} else {
+			print("Game has ended");
+		}
+	}
+
+	public boolean processMoveLocally(int index, Colour colour) {
+		board.setIntersection(index, colour);
+		System.out.println(board.gameOver());
+		return board.gameOver();
 	}
 	
-	public void processMoveLocally(int col, int row) {
-		
+	public int moveToIndex(String move) {
+		String[] moveArray = move.split(Protocol.DELIMITER2);
+		int row = Integer.parseInt(moveArray[0]);
+		int col = Integer.parseInt(moveArray[1]);	
+		return (row * board.getDimension()) + col;
 	}
-	
+
 	public void communicateMove(String move, ClientHandler clientWhoMadeMove) {
 		Set<ClientHandler> clientsInThisGame = getClientsInMyGame(clientWhoMadeMove);
 		int numberOfClientWhoMadeMove = clientWhoMadeMove.getNumber();
-		
-		
+		List<Integer> numbersOfClientsInThisGame = new ArrayList<Integer>();
+
 		for (ClientHandler handler : clientsInThisGame) {
-			
+			numbersOfClientsInThisGame.add(handler.getNumber());
 		}
+
+		int numberOfNextClient = getNextNumberOfList(
+				numbersOfClientsInThisGame, numberOfClientWhoMadeMove);
+		
+		ClientHandler nextClient = allClients.get(numberOfNextClient);
+		
+		String stringToSend = Protocol.TURN + Protocol.DELIMITER1 + clientWhoMadeMove.getClientName() +
+				Protocol.DELIMITER1 + move + Protocol.DELIMITER1 + nextClient.getClientName() + Protocol.DELIMITER1 + Protocol.COMMAND_END;
+		
+		broadcastToSetOfClients(stringToSend, clientsInThisGame);
 	}
-	
+
+	public int getNextNumberOfList(List<Integer> list, int i) {
+		List<Integer> numbersToRemove = new ArrayList<Integer>();
+		for (int j : list) {
+			if (j <= i) {
+				numbersToRemove.add(j);
+			}
+		}
+		if (list.size() != numbersToRemove.size()) {
+			list.removeAll(numbersToRemove);
+		}
+		return getMinimumValueFromList(list);
+	}
+
+
+	public int getMinimumValueFromList(List<Integer> list) {
+		return list.stream().reduce(Integer::min).get();
+	}
+
 	// handler = first player!
 	public void handleSettings(int boardSize, ClientHandler handler, Colour firstColour) {
+		handler.setColour(firstColour);
 		Colour secondColour = null;
 		Set<ClientHandler> clientsInMyGame = getClientsInMyGame(handler);
-	
+
 		Set<Player> players = new HashSet<Player>();
 		if (firstColour.equals(Colour.BLACK)) {
 			secondColour = Colour.WHITE;
@@ -264,6 +307,7 @@ public class Server extends Thread {
 						blackClient = clientInGame;
 					}
 				} else {
+					clientInGame.setColour(secondColour);
 					Player player = new OpponentPlayer(clientInGame.getClientName(), secondColour);
 					players.add(player);
 					if (secondColour.equals(Colour.BLACK)) {
@@ -271,27 +315,27 @@ public class Server extends Thread {
 					}
 				}
 			}
-			
+
 			String stringToSend = Protocol.START + Protocol.DELIMITER1 + 
 					clientsInMyGame.size() +
 					Protocol.DELIMITER1 + secondColour.toString() + Protocol.DELIMITER1 + 
 					boardSize + Protocol.DELIMITER1;
-			
+
 			Set<String> playerNames = new HashSet<String>();
 			for (ClientHandler handlerToAdd : clientsInMyGame) {
 				playerNames.add(handlerToAdd.getClientName());
 				stringToSend = stringToSend + handlerToAdd.getClientName() + Protocol.DELIMITER1;
 			}
-			
+
 			stringToSend = stringToSend + Protocol.COMMAND_END;
 			broadcastToSetOfClients(stringToSend, clientsInMyGame);
 
-			board = new Board(boardSize);
-			
+			board = new Board(boardSize, clientsInMyGame.size());
+
 			broadcastToSetOfClients(Protocol.TURN + Protocol.DELIMITER1 + blackClient.getClientName()
 			+ Protocol.DELIMITER1 + Protocol.FIRST + Protocol.DELIMITER1 + blackClient.getClientName() + Protocol.DELIMITER1 + Protocol.COMMAND_END, clientsInMyGame);
 
-//			startGame(players, boardSize);
+			//			startGame(players, boardSize);
 
 		} else {
 			try {
@@ -311,7 +355,7 @@ public class Server extends Thread {
 
 	public void addHandler(ClientHandler handler) {
 		availableClients.add(handler);
-		allClients.add(handler);
+		allClients.put(handler.getNumber(), handler);
 	}
 
 	public void removeHandler(ClientHandler handler) {

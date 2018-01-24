@@ -13,7 +13,7 @@ public class Game {
 	private Board board;
 
 	public Game(Set<Player> playersSet, int boardsize) {
-		this.board = new Board(boardsize);
+		this.board = new Board(boardsize, players.length);
 		this.numberOfPlayers = playersSet.size(); 
 		this.players = new Player[numberOfPlayers];
 		int i = 0;
@@ -24,7 +24,7 @@ public class Game {
 	}
 	
 	public Game(Set<Player> playersSet, int boardsize, GoGUIIntegrator gogui) {
-		this.board = new Board(boardsize);
+		this.board = new Board(boardsize, players.length);
 		this.numberOfPlayers = playersSet.size(); 
 		this.players = new Player[numberOfPlayers];
 		int i = 0;

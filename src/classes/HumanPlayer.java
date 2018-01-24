@@ -54,6 +54,10 @@ public class HumanPlayer extends Player {
 				}
 			}
 			scanner.close();
+			
+			System.out.println(String.format("Row is: %s", row));
+			System.out.println(String.format("Col is: %s", col));
+			System.out.println(String.format("Index is: %s", calculateIndex(col, row, boardSize)));
 			return calculateIndex(col, row, boardSize);
 		}
 	}

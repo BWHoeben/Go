@@ -38,7 +38,7 @@ public class Intersection {
 	}
 
 	public int indexToCol(int indexArg, int dimensionOfBoardArg) {
-		return indexArg - (index % dimensionOfBoardArg);
+		return indexArg - ((indexArg % dimensionOfBoardArg) * dimensionOfBoardArg);
 	}
 
 	public int calculateIndex(int col, int row, int dimensionOfBoardArg) {

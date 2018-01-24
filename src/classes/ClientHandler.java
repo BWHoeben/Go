@@ -16,6 +16,7 @@ public class ClientHandler extends Thread {
 	private BufferedWriter out;
 	private String clientName;
 	private int number;
+	private Colour colour;
 
 	/**
 	 * Constructs a ClientHandler object
@@ -32,6 +33,14 @@ public class ClientHandler extends Thread {
 	
 	public int getNumber() {
 		return number;
+	}
+	
+	public void setColour(Colour colourArg) {
+		this.colour = colourArg;
+	}
+	
+	public Colour getColour() {
+		return this.colour;
 	}
 
 	/**

@@ -19,9 +19,11 @@ public class Board {
 	private Colour lastMove;
 	private Map<Colour, Integer> score;
 	private List<Map<Integer, Colour>> boardSituations; 
-
+	private int numberOfPlayers;
+	
 	// Constructor
-	public Board(int dimension) {
+	public Board(int dimension, int numberOfPlayersArg) {
+		this.numberOfPlayers = numberOfPlayersArg;
 		this.dimension = dimension;
 		this.intersections = new HashMap<Integer, Intersection>();
 		this.groups = new ArrayList<Group>();
@@ -35,10 +37,10 @@ public class Board {
 		// Black is the first one to move, so white is set as lastMove by default
 		lastMove = Colour.WHITE;
 		score.put(lastMove, 0);
-		Colour colourToCalculate = lastMove.next();
+		Colour colourToCalculate = lastMove.next(this.numberOfPlayers);
 		while (!colourToCalculate.equals(lastMove)) {
 			score.put(colourToCalculate, 0);
-			colourToCalculate = colourToCalculate.next();
+			colourToCalculate = colourToCalculate.next(this.numberOfPlayers);
 		}
 		updateGroups();
 	}
@@ -70,6 +72,7 @@ public class Board {
 		// - the coordinates are valid
 		// - the intersection is empty
 		// - it does not replicate a previous situation
+		
 		if (isIntersection(index) && intersections.get(index).getColour().equals(Colour.EMPTY) 
 				&& !replicatesPreviousBoard(index, colour)) {
 			return true;
@@ -83,7 +86,7 @@ public class Board {
 	}
 
 	public boolean gameOver() {
-		if (getValidMoves().size() > 0) {
+		if (getValidMoves(lastMove.next(this.numberOfPlayers)).size() > 0) {
 			return false;
 		}
 		return true;
@@ -101,6 +104,9 @@ public class Board {
 	// indicates whether this situation has already occurred
 	public boolean replicatesPreviousBoard(int index, Colour colour) {
 		// would this move replicate a previous board situation?
+		
+		
+		
 		Map<Integer, Colour> currentSituation = currentSituation();
 		//update with hypothetical move
 		currentSituation.replace(index, colour);
@@ -124,10 +130,10 @@ public class Board {
 	}
 
 	// returns the indexes of all valid moves
-	public Set<Integer> getValidMoves() {
+	public Set<Integer> getValidMoves(Colour colour) {
 		Set<Integer> returnSet = new HashSet<Integer>();
 		for (Map.Entry<Integer, Intersection> entry : intersections.entrySet()) {
-			if (isValidMove(entry.getKey(), entry.getValue().getColour())) {
+			if (isValidMove(entry.getKey(), colour)) {
 				returnSet.add(entry.getKey());
 			}
 		}
@@ -217,7 +223,7 @@ public class Board {
 
 		// are there any groups without liberties?
 		// first check the intersection of the player who didn't commit the last move
-		Colour colourToCheck = lastMove.next();
+		Colour colourToCheck = lastMove.next(this.numberOfPlayers);
 		while (!colourToCheck.equals(lastMove)) {
 			for (Group group : groups) {
 				if (group.getColour().equals(colourToCheck)) {
@@ -227,7 +233,7 @@ public class Board {
 					}
 				}
 			}
-			colourToCheck = colourToCheck.next();
+			colourToCheck = colourToCheck.next(this.numberOfPlayers);
 		}
 	}
 
