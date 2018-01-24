@@ -6,8 +6,11 @@ import errors.NotAnIntException;
 
 public class HumanPlayer extends Player {
 
-	public HumanPlayer(String name, Colour colour) {
+	private Scanner scanner;
+	
+	public HumanPlayer(String name, Colour colour, Scanner scannerArg) {
 		super(name, colour);
+		this.scanner = scannerArg;
 	}
 
 	@Override
@@ -15,8 +18,7 @@ public class HumanPlayer extends Player {
 		int boardSize = board.getDimension();
 		int row = -1000;
 		int col = -1000;
-		Scanner scanner = new Scanner(System.in);
-
+		
 		System.out.println("Please enter row_column or PASS: ");			
 		String answer = scanner.nextLine();
 		if (answer.equals(Protocol.PASS)) {
@@ -53,11 +55,6 @@ public class HumanPlayer extends Player {
 					}
 				}
 			}
-			scanner.close();
-			
-			System.out.println(String.format("Row is: %s", row));
-			System.out.println(String.format("Col is: %s", col));
-			System.out.println(String.format("Index is: %s", calculateIndex(col, row, boardSize)));
 			return calculateIndex(col, row, boardSize);
 		}
 	}

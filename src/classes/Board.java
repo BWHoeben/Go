@@ -60,7 +60,8 @@ public class Board {
 			copyBoard();
 		} else {
 			try {
-				throw new InvalidMoveException("Invalid move!");
+				throw new InvalidMoveException(String.format(
+						"Invalid move! Index: %s Colour: %s", index, colour.toString()));
 			} catch (InvalidMoveException e) {
 				e.printStackTrace();
 			}
@@ -287,7 +288,7 @@ public class Board {
 	// if a group is captured (it has no more liberties),
 	// the stones are removed. I.e. the intersections are set to empty
 	public void setGroupToEmpty(Group group) {
-		Set<Intersection> set = (Set<Intersection>) group.getIntersections().values();
+		Set<Intersection> set = new HashSet<Intersection>(group.getIntersections().values());
 		for (Intersection intersect : set) {
 			intersect.setColour(Colour.EMPTY);
 		}
@@ -380,39 +381,39 @@ public class Board {
 	public Set<Intersection> adjacentIntersectionsGroupWithEqualColour(Group group) {
 		Colour colour = group.getColour();
 		Set<Intersection> adjacentIntersectionsGroup = adjacentIntersectionsGroup(group);
+		Set<Intersection> intersectsToRemove = new HashSet<Intersection>();
 		for (Intersection intersect : adjacentIntersectionsGroup) {
 			if (!intersect.getColour().equals(colour)) {
-				adjacentIntersectionsGroup.remove(intersect);
+				intersectsToRemove.add(intersect);
 			}
 		}
-
+		adjacentIntersectionsGroup.removeAll(intersectsToRemove);
 		return adjacentIntersectionsGroup;
 	}
 
 	// all adjacent intersections of a intersection
 	public Set<Intersection> adjacentIntersectionsIntersect(Intersection intersect) {
-		int col = intersect.getCol();
-		int row = intersect.getRow();
+		int index = intersect.getIndex();
 		int dimensionLocal = intersect.getDimension();
 
 		Set<Intersection> adjacentIntersections = new HashSet<Intersection>();
 
-		int index1 = intersect.calculateIndex(col + 1, row, dimensionLocal);
+		int index1 = index - 1;
 		if (isIntersection(index1)) {
 			adjacentIntersections.add(intersections.get(index1));
 		}
 
-		int index2 = intersect.calculateIndex(col - 1, row, dimensionLocal);
+		int index2 = index + 1;
 		if (isIntersection(index2)) {
 			adjacentIntersections.add(intersections.get(index2));
 		}
 
-		int index3 = intersect.calculateIndex(col, row + 1, dimensionLocal);
+		int index3 = index + dimensionLocal;
 		if (isIntersection(index3)) {
 			adjacentIntersections.add(intersections.get(index3));
 		}
 
-		int index4 = intersect.calculateIndex(col, row - 1, dimensionLocal);
+		int index4 = index - dimensionLocal;
 		if (isIntersection(index4)) {
 			adjacentIntersections.add(intersections.get(index4));
 		}

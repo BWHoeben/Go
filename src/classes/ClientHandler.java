@@ -89,7 +89,9 @@ public class ClientHandler extends Thread {
 			String msg = in.readLine();
 			while (true) {
 				Thread.sleep(1000);
-				server.handleMessage(msg, this);
+				if (msg != null) {
+					server.handleMessage(msg, this);
+				}
 				msg = in.readLine();
 				System.out.println("Message recieved");
 				System.out.println(msg);

@@ -247,16 +247,13 @@ public class Client extends Thread {
 			// the other client decided on the game settings, lets implement them
 			if (!firstToConnect) {
 				implementSettings(split, msg);
-				print("Settings implemented.");
 			}
 
 			// implements all the players (add them to this.players)
 			implementPlayers(split, msg);
-			print("Players implemented.");
 
 			// create a new board
 			this.board = new Board(boardSize, numberOfPlayers);
-			print("Board generated");
 		}
 	}
 
@@ -277,7 +274,8 @@ public class Client extends Thread {
 			Colour opponentColour = clientColour.next(numberOfPlayers);
 			for (int i = 0; i < playerNames.length; i++) {
 				if (playerNames[i].equals(getClientName())) {
-					players.add(generateClientPlayer(clientColour));
+					this.clientPlayer = generateClientPlayer(clientColour);
+					players.add(this.clientPlayer);
 				} else {
 					players.add(new OpponentPlayer(playerNames[i], opponentColour));
 				}
@@ -391,9 +389,6 @@ public class Client extends Thread {
 		Player playerWhoJustHadATurn = getPlayer(split[1]);
 		Player playerToMakeMove = getPlayer(split[3]);
 
-		print(String.format("Player who just had a move: %s", playerWhoJustHadATurn.getName()));
-		print(String.format("Player to make a move: %s", playerToMakeMove.getName()));
-		print(String.format("Client player: %s",  this.clientPlayer.getName()));
 		// opponent passed
 		if (split[2].equals(Protocol.PASS)) {
 			if (playerWhoJustHadATurn.getLastMoveWasPass()) {
@@ -406,14 +401,13 @@ public class Client extends Thread {
 			playerWhoJustHadATurn.pass(true);
 
 
-		} else if (!split[2].equals(Protocol.FIRST)) {
+		} else if (!split[2].equals(Protocol.FIRST) && !split[1].equals(clientPlayer.getName())) {
 			print("Processing opponents move");
 			int move = getMove(split[2]);
 			board.setIntersection(move, playerWhoJustHadATurn.getColour());
 		} 
 		
 		if (playerToMakeMove.getName().equals(this.clientPlayer.getName())) { 
-			print("Asking player to make a move");
 			int moveToMake = playerToMakeMove.determineMove(board);
 			board.setIntersection(moveToMake, playerToMakeMove.getColour());
 			String move = indexToMove(moveToMake);
@@ -594,7 +588,7 @@ public class Client extends Thread {
 
 	public Player generateClientPlayer(Colour colour) {
 		if (Client.isHuman) {
-			return new HumanPlayer(this.name, colour);
+			return new HumanPlayer(this.name, colour, Client.SCANNER);
 		} else {
 			Strategy strategy = new RandomStrategy();
 			return new ComputerPlayer(colour, strategy);	

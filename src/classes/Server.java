@@ -26,7 +26,8 @@ public class Server extends Thread {
 	private ServerSocket ssock;
 	private Set<Game> games;
 	private ClientHandler blackClient;
-	private Board board;
+	//private Set<Board> boards;
+	private Map<ClientHandler, Board> clientBoardCombinations;
 
 	public static void main(String[] args) 
 			throws InvalidNumberOfArgumentsException, NoValidPortException {
@@ -55,6 +56,8 @@ public class Server extends Thread {
 		// that are currently in a game as well as those that are not
 		this.allClients = new HashMap<Integer, ClientHandler>();
 
+		this.clientBoardCombinations = new HashMap<ClientHandler, Board>();
+		
 		// Done with reading input from console, so closing scanner
 		scanner.close();
 	}
@@ -219,13 +222,15 @@ public class Server extends Thread {
 	}
 	// CASE MOVE row_column
 	public void processMove(String[] split, String msg, ClientHandler handler) {
-		String playerWhoMadeMove = handler.getClientName();
-		Set<ClientHandler> clientsInThisGame = getClientsInMyGame(handler);
+		//String playerWhoMadeMove = handler.getClientName();
+		//Set<ClientHandler> clientsInThisGame = getClientsInMyGame(handler);
 		Boolean gameOver = false;
-		String move = split[1];
+		Board board = getBoardOfClient(handler);
+		Move move = new Move(split[1], board.getDimension(), handler.getColour());
+		
 		// Check for pass
-		if (!move.equals(Protocol.PASS)) {
-			gameOver = processMoveLocally(moveToIndex(move), handler.getColour());
+		if (move != null) {
+			gameOver = processMoveLocally(move.getIndex(), handler.getColour(), board);
 		}
 		if (!gameOver) {
 			communicateMove(move, handler);
@@ -234,20 +239,16 @@ public class Server extends Thread {
 		}
 	}
 
-	public boolean processMoveLocally(int index, Colour colour) {
+	public boolean processMoveLocally(int index, Colour colour, Board board) {
 		board.setIntersection(index, colour);
-		System.out.println(board.gameOver());
 		return board.gameOver();
 	}
 	
-	public int moveToIndex(String move) {
-		String[] moveArray = move.split(Protocol.DELIMITER2);
-		int row = Integer.parseInt(moveArray[0]);
-		int col = Integer.parseInt(moveArray[1]);	
-		return (row * board.getDimension()) + col;
+	public Board getBoardOfClient(ClientHandler handler) {
+		return clientBoardCombinations.get(handler);
 	}
 
-	public void communicateMove(String move, ClientHandler clientWhoMadeMove) {
+	public void communicateMove(Move move, ClientHandler clientWhoMadeMove) {
 		Set<ClientHandler> clientsInThisGame = getClientsInMyGame(clientWhoMadeMove);
 		int numberOfClientWhoMadeMove = clientWhoMadeMove.getNumber();
 		List<Integer> numbersOfClientsInThisGame = new ArrayList<Integer>();
@@ -262,7 +263,7 @@ public class Server extends Thread {
 		ClientHandler nextClient = allClients.get(numberOfNextClient);
 		
 		String stringToSend = Protocol.TURN + Protocol.DELIMITER1 + clientWhoMadeMove.getClientName() +
-				Protocol.DELIMITER1 + move + Protocol.DELIMITER1 + nextClient.getClientName() + Protocol.DELIMITER1 + Protocol.COMMAND_END;
+				Protocol.DELIMITER1 + move.getMoveAsString() + Protocol.DELIMITER1 + nextClient.getClientName() + Protocol.DELIMITER1 + Protocol.COMMAND_END;
 		
 		broadcastToSetOfClients(stringToSend, clientsInThisGame);
 	}
@@ -330,8 +331,12 @@ public class Server extends Thread {
 			stringToSend = stringToSend + Protocol.COMMAND_END;
 			broadcastToSetOfClients(stringToSend, clientsInMyGame);
 
-			board = new Board(boardSize, clientsInMyGame.size());
-
+			Board board = new Board(boardSize, clientsInMyGame.size());
+			
+			for (ClientHandler clientInGame : clientsInMyGame) {
+				clientBoardCombinations.put(clientInGame, board);
+			}
+			
 			broadcastToSetOfClients(Protocol.TURN + Protocol.DELIMITER1 + blackClient.getClientName()
 			+ Protocol.DELIMITER1 + Protocol.FIRST + Protocol.DELIMITER1 + blackClient.getClientName() + Protocol.DELIMITER1 + Protocol.COMMAND_END, clientsInMyGame);
 
