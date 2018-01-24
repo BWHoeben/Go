@@ -44,6 +44,7 @@ public class Client extends Thread {
 	private Board board;
 	private Colour clientColour;
 	static final Scanner SCANNER = new Scanner(System.in);
+	private int opponents;
 
 	public static void main(String[] args) 
 			throws InvalidHostException, NoValidPortException, InvalidCommandException {
@@ -153,6 +154,18 @@ public class Client extends Thread {
 			throw new CouldNotConnectException("Could not connect to server!");
 		}
 		print("Connection succesfull!");
+		
+		while (true) {
+			print("How many opponents do you want: 1, 2 or 3?");
+			String answer = SCANNER.nextLine();
+			if (answer.equals("1") || answer.equals("2") || answer.equals("3")) {
+				this.opponents = Integer.parseInt(answer);
+				break;
+			} else {
+				print("Thats not a valid answer, please try again");
+			}
+		}
+		
 		this.name = name;
 		try {
 			this.in = new BufferedReader(new InputStreamReader(sock.getInputStream()));
@@ -174,6 +187,7 @@ public class Client extends Thread {
 				Protocol.DELIMITER1 + 0 + Protocol.DELIMITER1 + 0 +
 				Protocol.DELIMITER1 + 0 + Protocol.DELIMITER1 
 				+ 0 + Protocol.DELIMITER1 + Protocol.COMMAND_END);
+		send(Protocol.REQUESTGAME + Protocol.DELIMITER1 + this.opponents + Protocol.DELIMITER1 + Protocol.RANDOM + Protocol.DELIMITER1 + Protocol.COMMAND_END);
 	}
 	public void run() {
 		try {
@@ -426,7 +440,7 @@ public class Client extends Thread {
 			print("Waiting for opponent to make a move");
 		}
 	}
-
+	// CASE: ENDGAME REASON PLAYER1 SCORE PLAYER2 SCORE PLAYER3 SCORE... 
 	public void handleMessageEndGame(String[] split, String msg) {
 		if (split[1].equals(Protocol.ABORTED)) {
 			print("Game was aborted!");	
@@ -442,33 +456,25 @@ public class Client extends Thread {
 				e.printStackTrace();
 			}
 		}
-		if (numberOfPlayers == 2) {
-			if (split.length != 6) {
-				try {
-					throw new InvalidCommandException("Server provided incorrect arguments.");
-				} catch (InvalidCommandException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
+		if (board != null) {
+			try {
+				Map<Player, Integer> playersToCheck = new HashMap<Player, Integer>();
+				for (int i = 0; i < numberOfPlayers; i++) {
+					playersToCheck.put(getPlayer(split[i + 2]), Integer.parseInt(split[i + 3]));
 				}
+				checkScores(playersToCheck, board);
+			} catch (NullPointerException e) {
+				print("Unanble to verify scores with local data");
 			}
 
-			Map<Player, Integer> playersToCheck = new HashMap<Player, Integer>(); 	 
-			checkScores(playersToCheck, board);
 			if (split[3].equals(split[5])) {
 				print("It's a draw!");
 			} else {
 				print(String.format(
-					"%s won with a score of %s, %s lost with a score of %s",
-					split[2], split[3], split[4], split[5]));
-			}
-			endGame();
-		} else {
-			try {
-				throw new NotYetImplementedException("Not yet implemented!");
-			} catch (NotYetImplementedException e) {
-				e.printStackTrace();
+						"%s won with a score of %s", split[2], split[3]));
 			}
 		}
+		endGame();
 	}
 
 	public void checkEndCommand(String[] array, String message) {

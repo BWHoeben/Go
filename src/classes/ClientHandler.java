@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
+import java.util.Timer;
 
 import errors.NotYetImplementedException;
 import errors.VersionsDoNotMatchException;
@@ -17,6 +18,9 @@ public class ClientHandler extends Thread {
 	private String clientName;
 	private int number;
 	private Colour colour;
+	private int timeOutSeconds = 5000;
+	private Timer timer = new Timer();
+	private int requestedNumberOfOpponents;
 
 	/**
 	 * Constructs a ClientHandler object
@@ -29,16 +33,25 @@ public class ClientHandler extends Thread {
 		in = new BufferedReader(new InputStreamReader(sockArg.getInputStream()));
 		out = new BufferedWriter(new OutputStreamWriter(sockArg.getOutputStream()));
 		System.out.println("Clienthandeler created");
+		this.timer = new Timer();
 	}
-	
+
 	public int getNumber() {
 		return number;
 	}
 	
+	public int getRequestedNumberOfOpponents() {
+		return this.requestedNumberOfOpponents;
+	}
+	
+	public void setRequestedNumberOfOpponents(int numberArg) {
+		this.requestedNumberOfOpponents = numberArg;
+	}
+
 	public void setColour(Colour colourArg) {
 		this.colour = colourArg;
 	}
-	
+
 	public Colour getColour() {
 		return this.colour;
 	}
@@ -75,8 +88,8 @@ public class ClientHandler extends Thread {
 			}
 		}
 	}
-	
-		/**
+
+	/**
 	 * This method takes care of sending messages from the Client.
 	 * Every message that is received, is preprended with the name
 	 * of the Client, and the new message is offered to the Server
@@ -91,6 +104,7 @@ public class ClientHandler extends Thread {
 				server.handleMessage(msg, this);
 				msg = in.readLine();
 				System.out.println("Message recieved");
+				timer.cancel();
 				System.out.println(msg);
 			}
 		} catch (IOException e) {
@@ -105,6 +119,21 @@ public class ClientHandler extends Thread {
 	 * and shutdown() is called.
 	 */
 	public void sendMessageToClient(String msg) {
+		String[] array = msg.split(Protocol.DELIMITER1);
+		if (array.length > 1 && 
+				(array[0].equals(Protocol.START) || array[0].equals(Protocol.ENDGAME) ||
+						(array[0].equals(Protocol.TURN) && array[1].equals(clientName)))) {
+			ClientHandler handlerToSend = this;
+			this.timer.schedule(new java.util.TimerTask() {
+				@Override
+				public void run() {
+					System.out.println(String.format("%s timed out", clientName));
+					server.handleMessage(Protocol.TIMEOUT, handlerToSend);
+				}
+			}, 
+					timeOutSeconds * 1000 
+			);
+		}
 		try {
 			System.out.println(String.format("Sending message to %s: %s", clientName, msg)); 
 			out.write(msg);
@@ -114,7 +143,7 @@ public class ClientHandler extends Thread {
 			shutdown();
 		}
 	}
-	
+
 	/**
 	 * This ClientHandler signs off from the Server and subsequently
 	 * sends a last broadcast to the Server to inform that the Client

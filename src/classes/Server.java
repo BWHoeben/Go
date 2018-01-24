@@ -213,7 +213,21 @@ public class Server extends Thread {
 			processMove(split, msg, handler);
 		} else if (split[0].equals(Protocol.QUIT)) {
 			handleQuit(handler);
+		} else if (split[0].equals(Protocol.TIMEOUT)) {
+			endGame(handler, Protocol.TIMEOUT);
+		} else if (split[0].equals(Protocol.REQUESTGAME)) {
+			handleRequest(split, handler);
 		}
+	}
+	
+	public void handleRequest(String[] split, ClientHandler handler) {
+		print(String.format("#s requested a game with %s opponents", handler.getClientName(), split[1]));
+		handler.setRequestedNumberOfOpponents(Integer.parseInt(split[1]));
+		match();
+	}
+	
+	public void match() {
+		Map<Integer, Set<ClientHandler>> clientsSorted = new HashMap<Integer, Set<ClientHandler>>();
 	}
 
 	public void handleQuit(ClientHandler handler) {
@@ -234,25 +248,46 @@ public class Server extends Thread {
 	public void endGame(ClientHandler handler, String reason) {
 		String stringToSend = Protocol.ENDGAME + Protocol.DELIMITER1 + reason + Protocol.DELIMITER1;
 		Set<ClientHandler> clientsInMyGame = getClientsInMyGame(handler);
-		Map<Colour, Integer> scores = getBoardOfClient(handler).getScore();
-		Map<ClientHandler, Integer> clientScores = new HashMap<ClientHandler, Integer>();
-		assert clientsInMyGame.size() == scores.size();
-		int score = 0;
-		for (ClientHandler clientInGame : clientsInMyGame) {
-			score = scores.get(clientInGame.getColour());
-			clientScores.put(clientInGame, score);
-		}
-				
-		for (int i = 0; i < clientsInMyGame.size(); i++) {
-			ClientHandler clientWithMaxScore = getClientWithHighestScore(clientScores);
-			stringToSend = stringToSend + clientWithMaxScore.getClientName() 
+		try {
+			Map<Colour, Integer> scores = getBoardOfClient(handler).getScore();
+			Map<ClientHandler, Integer> clientScores = new HashMap<ClientHandler, Integer>();
+			assert clientsInMyGame.size() == scores.size();
+			int score = 0;
+			for (ClientHandler clientInGame : clientsInMyGame) {
+				score = scores.get(clientInGame.getColour());
+				clientScores.put(clientInGame, score);
+			}
+
+			for (int i = 0; i < clientsInMyGame.size(); i++) {
+				ClientHandler clientWithMaxScore = getClientWithHighestScore(clientScores);
+				stringToSend = stringToSend + clientWithMaxScore.getClientName() 
 				+ Protocol.DELIMITER1 + clientScores.get(clientWithMaxScore) + Protocol.DELIMITER1;
-			clientScores.remove(clientWithMaxScore);
-			
+				clientScores.remove(clientWithMaxScore);
+
+			}
+			broadcastToSetOfClients(stringToSend + Protocol.COMMAND_END, clientsInMyGame);
+		} catch (NullPointerException e) {
+			print(String.format("Game ended but was not yet initialized. "
+					+ "Reason for end: %s", reason));
+			if (reason.equals(Protocol.TIMEOUT)) {
+				print(String.format("Time-out due to %s. Sending players back to lobby", handler.getClientName()));
+				String timeOutString = Protocol.ENDGAME + Protocol.DELIMITER1 + Protocol.TIMEOUT + Protocol.DELIMITER1;
+				for (ClientHandler handlerToAdd : clientsInMyGame) {
+					timeOutString = timeOutString + handlerToAdd.getClientName() + Protocol.DELIMITER1 + 0 + Protocol.DELIMITER1;
+				}
+				timeOutString = 	timeOutString + Protocol.COMMAND_END;	
+				broadcastToSetOfClients(timeOutString, clientsInMyGame);
+
+			}
+			sendClientsBackToLobby(clientsInMyGame);
 		}
-		broadcastToSetOfClients(stringToSend + Protocol.COMMAND_END, clientsInMyGame);
 	}
-	
+
+	public void sendClientsBackToLobby(Set<ClientHandler> clients) {
+		this.availableClients.addAll(clients);
+		clients.removeAll(clients);
+	}
+
 	public ClientHandler getClientWithHighestScore(Map<ClientHandler, Integer> clientScores) {
 		int max = 0;
 		ClientHandler maxClient = null;
