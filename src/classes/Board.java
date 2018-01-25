@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
+import GUI.GoGUIIntegrator;
 import errors.InvalidMoveException;
 
 public class Board {
@@ -20,8 +21,14 @@ public class Board {
 	private Map<Colour, Integer> score;
 	private List<Map<Integer, Colour>> boardSituations; 
 	private int numberOfPlayers;
+	private GoGUIIntegrator gogui;
 	
 	// Constructor
+	public Board(int dimension, int numberOfPlayersArg, GoGUIIntegrator goguiArg) {
+		this(dimension, numberOfPlayersArg);
+		this.gogui = goguiArg;
+	}
+	
 	public Board(int dimension, int numberOfPlayersArg) {
 		this.numberOfPlayers = numberOfPlayersArg;
 		this.dimension = dimension;
@@ -44,31 +51,30 @@ public class Board {
 		}
 		updateGroups();
 	}
+	
 
 	public int getDimension() {
 		return dimension;
 	}
 
-	public void setIntersection(int index, Colour colour) {
+	public void setIntersection(Move move) throws InvalidMoveException {
 		// make a move, provided the move is valid
-		if (isValidMove(index, colour)) {
-			Intersection intersect = intersections.get(index);
-			intersect.setColour(colour);
-			this.lastMove = colour;		
+		if (isValidMove(move)) {
+			Intersection intersect = intersections.get(move.getIndex());
+			intersect.setColour(move.getColour());
+			this.lastMove = move.getColour();		
 			updateGroups();
 			updateScore();
 			copyBoard();
 		} else {
-			try {
 				throw new InvalidMoveException(String.format(
-						"Invalid move! Index: %s Colour: %s", index, colour.toString()));
-			} catch (InvalidMoveException e) {
-				e.printStackTrace();
-			}
+						"Invalid move! Index: %s Colour: %s", move.getIndex(), move.getColour().toString()));
 		}
 	}
 
-	public boolean isValidMove(int index, Colour colour) {
+	public boolean isValidMove(Move move) {
+		int index = move.getIndex();
+		Colour colour = move.getColour();
 		// a move is valid if:
 		// - the coordinates are valid
 		// - the intersection is empty
@@ -134,7 +140,7 @@ public class Board {
 	public Set<Integer> getValidMoves(Colour colour) {
 		Set<Integer> returnSet = new HashSet<Integer>();
 		for (Map.Entry<Integer, Intersection> entry : intersections.entrySet()) {
-			if (isValidMove(entry.getKey(), colour)) {
+			if (isValidMove(new Move(entry.getKey(), this.dimension, colour))) {
 				returnSet.add(entry.getKey());
 			}
 		}
@@ -290,6 +296,9 @@ public class Board {
 		Set<Intersection> set = new HashSet<Intersection>(group.getIntersections().values());
 		for (Intersection intersect : set) {
 			intersect.setColour(Colour.EMPTY);
+			if (this.gogui != null) {
+				gogui.removeStone(intersect.getCol(), intersect.getRow());
+			}
 		}
 	}
 

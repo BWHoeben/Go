@@ -28,6 +28,9 @@ public class Protocol {
 	public static final String ABORTED = "ABORTED";
 	public static final String TIMEOUT = "TIMEOUT";
 	
+	public static final String YES = "YES";
+	public static final String NO = "NO";
+	
 	public Protocol() {
 		
 	}

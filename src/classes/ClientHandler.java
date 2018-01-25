@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
+import java.util.HashSet;
 import java.util.Timer;
 
 import errors.NotYetImplementedException;
@@ -19,8 +20,9 @@ public class ClientHandler extends Thread {
 	private int number;
 	private Colour colour;
 	private int timeOutSeconds = 5000;
-	private Timer timer = new Timer();
-	private int requestedNumberOfOpponents;
+	private HashSet<Timer> timers = new HashSet<Timer>();
+	private boolean run = true;
+	private boolean lastMoveWasPass = false;
 
 	/**
 	 * Constructs a ClientHandler object
@@ -32,20 +34,18 @@ public class ClientHandler extends Thread {
 		this.number = number;
 		in = new BufferedReader(new InputStreamReader(sockArg.getInputStream()));
 		out = new BufferedWriter(new OutputStreamWriter(sockArg.getOutputStream()));
-		System.out.println("Clienthandeler created");
-		this.timer = new Timer();
 	}
 
 	public int getNumber() {
 		return number;
 	}
 	
-	public int getRequestedNumberOfOpponents() {
-		return this.requestedNumberOfOpponents;
+	public void pass(boolean passed) {
+		this.lastMoveWasPass = passed;
 	}
 	
-	public void setRequestedNumberOfOpponents(int numberArg) {
-		this.requestedNumberOfOpponents = numberArg;
+	public boolean passedOnPreviousTurn() {
+		return lastMoveWasPass;
 	}
 
 	public void setColour(Colour colourArg) {
@@ -100,16 +100,23 @@ public class ClientHandler extends Thread {
 	public void run() {
 		try {
 			String msg = in.readLine();
-			while (msg != null) {
+			while (msg != null && run) {
 				server.handleMessage(msg, this);
 				msg = in.readLine();
 				System.out.println("Message recieved");
-				timer.cancel();
+				cancelTimers();
 				System.out.println(msg);
 			}
 		} catch (IOException e) {
 			shutdown();
 		}
+	}
+
+	public void cancelTimers() {
+		for (Timer timer : timers) {
+			timer.cancel();
+		}
+		timers.removeAll(timers);
 	}
 
 	/**
@@ -124,15 +131,21 @@ public class ClientHandler extends Thread {
 				(array[0].equals(Protocol.START) || array[0].equals(Protocol.ENDGAME) ||
 						(array[0].equals(Protocol.TURN) && array[1].equals(clientName)))) {
 			ClientHandler handlerToSend = this;
-			this.timer.schedule(new java.util.TimerTask() {
+
+			Timer timer = new Timer();
+			timers.add(timer);
+			timer.schedule(new java.util.TimerTask() {
 				@Override
 				public void run() {
 					System.out.println(String.format("%s timed out", clientName));
 					server.handleMessage(Protocol.TIMEOUT, handlerToSend);
+					cancelTimers();
+					shutdown();
 				}
 			}, 
 					timeOutSeconds * 1000 
-			);
+					);
+
 		}
 		try {
 			System.out.println(String.format("Sending message to %s: %s", clientName, msg)); 
@@ -149,9 +162,12 @@ public class ClientHandler extends Thread {
 	 * sends a last broadcast to the Server to inform that the Client
 	 * is no longer participating in the chat.
 	 */
-	private void shutdown() {
-		server.removeHandler(this);
-		//server.broadcastToAllClients("[" + clientName + " has left]");
+	public void shutdown() {
+		if (run) {
+			server.removeHandler(this);
+			server.print("[" + clientName + " disconnected]");
+			this.run = false;
+		}
 	}
 
 	public String getClientName() {

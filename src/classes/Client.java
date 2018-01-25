@@ -23,6 +23,7 @@ import errors.InvalidColourException;
 import errors.InvalidCommandException;
 import errors.InvalidCoordinateException;
 import errors.InvalidHostException;
+import errors.InvalidMoveException;
 import errors.NameException;
 import errors.NoValidPortException;
 import errors.NotAnIntException;
@@ -45,6 +46,7 @@ public class Client extends Thread {
 	private Colour clientColour;
 	static final Scanner SCANNER = new Scanner(System.in);
 	private int opponents;
+	private GoGUIIntegrator gogui;
 
 	public static void main(String[] args) 
 			throws InvalidHostException, NoValidPortException, InvalidCommandException {
@@ -57,6 +59,7 @@ public class Client extends Thread {
 			e.printStackTrace();
 		}
 	}
+
 	public static void askForInput() 
 			throws InvalidCommandException, InvalidHostException, NoValidPortException {
 		print("How do you want to play? 1 = human, 2 = computer");
@@ -127,6 +130,19 @@ public class Client extends Thread {
 		}
 		return password;
 	}
+
+	public int askForOpponents() {
+		while (true) {
+			print("How many opponents do you want: 1, 2 or 3?");
+			String answer = SCANNER.nextLine();
+			if (answer.equals("1") || answer.equals("2") || answer.equals("3")) {
+				return Integer.parseInt(answer);
+			} else {
+				print("Thats not a valid answer, please try again");
+			}
+		}
+	}
+
 	public static void useDefaultInput() throws UnknownHostException {
 		isHuman = true;
 		print("Playing as human.");
@@ -154,18 +170,11 @@ public class Client extends Thread {
 			throw new CouldNotConnectException("Could not connect to server!");
 		}
 		print("Connection succesfull!");
-		
-		while (true) {
-			print("How many opponents do you want: 1, 2 or 3?");
-			String answer = SCANNER.nextLine();
-			if (answer.equals("1") || answer.equals("2") || answer.equals("3")) {
-				this.opponents = Integer.parseInt(answer);
-				break;
-			} else {
-				print("Thats not a valid answer, please try again");
-			}
-		}
-		
+
+		//this.opponents = askForOpponents();
+
+		this.opponents = 1;
+
 		this.name = name;
 		try {
 			this.in = new BufferedReader(new InputStreamReader(sock.getInputStream()));
@@ -178,7 +187,7 @@ public class Client extends Thread {
 			throw new CouldNotConnectException("Could not initialize buffered writer!");
 		}
 
-		players = new HashSet<Player>();
+		this.players = new HashSet<Player>();
 
 		send(Protocol.NAME + Protocol.DELIMITER1 + name + Protocol.DELIMITER1 +
 				Protocol.VERSION + Protocol.DELIMITER1 + Protocol.VERSIONNUMBER +
@@ -187,8 +196,14 @@ public class Client extends Thread {
 				Protocol.DELIMITER1 + 0 + Protocol.DELIMITER1 + 0 +
 				Protocol.DELIMITER1 + 0 + Protocol.DELIMITER1 
 				+ 0 + Protocol.DELIMITER1 + Protocol.COMMAND_END);
-		send(Protocol.REQUESTGAME + Protocol.DELIMITER1 + this.opponents + Protocol.DELIMITER1 + Protocol.RANDOM + Protocol.DELIMITER1 + Protocol.COMMAND_END);
+		sendRequest(this.opponents);
 	}
+
+	public void sendRequest(int numberOfopponents) {
+		send(Protocol.REQUESTGAME + Protocol.DELIMITER1 + numberOfopponents + 
+				Protocol.DELIMITER1 + Protocol.RANDOM + Protocol.DELIMITER1 + Protocol.COMMAND_END);
+	}
+
 	public void run() {
 		try {
 			String msg = in.readLine();
@@ -258,8 +273,17 @@ public class Client extends Thread {
 			// implements all the players (add them to this.players)
 			implementPlayers(split, msg);
 
-			// create a new board
-			this.board = new Board(boardSize, numberOfPlayers);
+			// start the GUI
+			if (numberOfPlayers == 2) {
+				this.gogui = new GoGUIIntegrator(false, false, boardSize);
+				gogui.startGUI();
+				gogui.setBoardSize(boardSize);
+				// create a new board
+				this.board = new Board(boardSize, numberOfPlayers, gogui);
+			} else {
+				print("Gui not ready for multiple players");
+				this.board = new Board(boardSize, numberOfPlayers);
+			}
 		}
 	}
 
@@ -371,75 +395,95 @@ public class Client extends Thread {
 	}
 
 	public void handleMessageTurn(String[] split, String msg) {
-		while (this.board == null) {
-			try {
-				Thread.sleep(500);
-				print("Waiting...");
-			} catch (InterruptedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}
-
-		// incorrect arguments provided, a TURN-message should be 4 arguments
-		if (split.length != 4) {
-			try {
-				throw new InvalidCommandException(String.format(
-						"Server provided incorrect arguments. Message was %s", msg));
-			} catch (InvalidCommandException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		} 
-
-		Player playerWhoJustHadATurn = getPlayer(split[1]);
-		Player playerToMakeMove = getPlayer(split[3]);
-
-		// opponent passed
-		if (split[2].equals(Protocol.PASS) && !split[1].equals(clientPlayer.getName())) {
-			if (playerWhoJustHadATurn.getLastMoveWasPass()) {
-				//	try {
-				//		throw new AlreadyPassedException("Player already passed last time!");
-				//	} catch (AlreadyPassedException e) {
-				//		e.printStackTrace();
-				//	}
-				print(playerWhoJustHadATurn.getName() + " passed two times in a row!");	
-			}
-			playerWhoJustHadATurn.pass(true);
-
-
-		} else if (!split[2].equals(Protocol.FIRST) && !split[1].equals(clientPlayer.getName())) {
-			print("Processing opponents move");
-			Move move;
-			try {
-				move = new Move(split[2], boardSize, this.clientColour);
-				board.setIntersection(move.getIndex(), playerWhoJustHadATurn.getColour());
-			} catch (InvalidCoordinateException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		} 
-
-		if (playerToMakeMove.getName().equals(this.clientPlayer.getName())) { 
-			Move moveToMake = playerToMakeMove.determineMove(board);
-
-			if (moveToMake.getQuit()) {
-				send(Protocol.QUIT + Protocol.DELIMITER1 + Protocol.COMMAND_END);
-			} else {
-				String move = null;
-				if (moveToMake.getPass()) {
-					move = "PASS";
-				} else {
-					move = moveToMake.toString();
-					board.setIntersection(moveToMake.getIndex(), playerToMakeMove.getColour());
-				}
-				send(Protocol.MOVE + Protocol.DELIMITER1 + move + 
-						Protocol.DELIMITER1 + Protocol.COMMAND_END);
-			}
+		if (this.board == null) {
+			print("Board is not yet implemented, ignoring message.");
 		} else {
-			print("Waiting for opponent to make a move");
+
+			while (this.board == null) {
+				try {
+					Thread.sleep(500);
+					print("Waiting...");
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+
+			// incorrect arguments provided, a TURN-message should be 4 arguments
+			if (split.length != 4) {
+				try {
+					throw new InvalidCommandException(String.format(
+							"Server provided incorrect arguments. Message was %s", msg));
+				} catch (InvalidCommandException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			} 
+
+			Player playerWhoJustHadATurn = getPlayer(split[1]);
+			Player playerToMakeMove = getPlayer(split[3]);
+			boolean opponentDoublePass = false;
+			// opponent passed
+			if (split[2].equals(Protocol.PASS) && !split[1].equals(clientPlayer.getName())) {
+				if (playerWhoJustHadATurn.getLastMoveWasPass()) {
+					print(playerWhoJustHadATurn.getName() + " passed two times in a row!");	
+					opponentDoublePass = true;
+				}
+				playerWhoJustHadATurn.pass(true);
+
+
+			} else if (!split[2].equals(Protocol.FIRST) && !split[1].equals(clientPlayer.getName())) {
+				print("Processing opponents move");
+				Move move;
+				try {
+					move = new Move(split[2], boardSize, playerWhoJustHadATurn.getColour());
+					board.setIntersection(move);
+					processMoveInGui(move);
+				} catch (InvalidCoordinateException e) {
+					print("That's not a valid coordinate");
+					e.printStackTrace();
+				} catch (InvalidMoveException e) {
+					print("That's not a valid move");
+				}
+			} 
+
+			if (playerToMakeMove.getName().equals(this.clientPlayer.getName()) 
+					&& !opponentDoublePass) { 
+				Move moveToMake = playerToMakeMove.determineMove(board);
+
+				if (moveToMake.getQuit()) {
+					send(Protocol.QUIT + Protocol.DELIMITER1 + Protocol.COMMAND_END);
+				} else {
+					String move = null;
+					if (moveToMake.getPass()) {
+						move = "PASS";
+					} else {
+						move = moveToMake.toString();
+						try {
+							board.setIntersection(moveToMake);
+						} catch (InvalidMoveException e) {
+							// TODO Auto-generated catch block
+							e.printStackTrace();
+						}
+					}
+					if (!moveToMake.getPass() && !moveToMake.getQuit()) {
+						processMoveInGui(moveToMake);
+					}
+					send(Protocol.MOVE + Protocol.DELIMITER1 + move + 
+							Protocol.DELIMITER1 + Protocol.COMMAND_END);
+				}
+			} else {
+				print("Waiting for opponent to make a move");
+			}
 		}
 	}
+
+	public void processMoveInGui(Move move) {
+		int row = move.getRow();
+		int col = move.getCol();
+		gogui.addStone(row, col, move.getColour().equals(Colour.WHITE));
+	}
+
 	// CASE: ENDGAME REASON PLAYER1 SCORE PLAYER2 SCORE PLAYER3 SCORE... 
 	public void handleMessageEndGame(String[] split, String msg) {
 		if (split[1].equals(Protocol.ABORTED)) {
@@ -460,7 +504,8 @@ public class Client extends Thread {
 			try {
 				Map<Player, Integer> playersToCheck = new HashMap<Player, Integer>();
 				for (int i = 0; i < numberOfPlayers; i++) {
-					playersToCheck.put(getPlayer(split[i + 2]), Integer.parseInt(split[i + 3]));
+					playersToCheck.put(getPlayer(split[(i * 2) + 2]), 
+							Integer.parseInt(split[(i * 2) + 3]));
 				}
 				checkScores(playersToCheck, board);
 			} catch (NullPointerException e) {
@@ -474,7 +519,21 @@ public class Client extends Thread {
 						"%s won with a score of %s", split[2], split[3]));
 			}
 		}
-		endGame();
+		while (true) {
+			print("Do you want to play again? YES or NO");
+			String answer = SCANNER.nextLine();
+			if (answer.toUpperCase().equals(Protocol.YES)) {
+				this.opponents = askForOpponents();
+				resetVariables();
+				sendRequest(this.opponents);
+				break;
+			} else if (answer.equals(Protocol.NO)) {
+				endGame();	
+				break;
+			} else {
+				print("Invalid command try again.");
+			}
+		}
 	}
 
 	public void checkEndCommand(String[] array, String message) {
@@ -538,7 +597,6 @@ public class Client extends Thread {
 		try {
 			sock.close();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
@@ -667,6 +725,14 @@ public class Client extends Thread {
 
 	public static void print(String msg) {
 		System.out.println(msg);
+		System.out.flush();
+	}
+
+	public void resetVariables() {
+		this.clientPlayer = null;
+		this.players = new HashSet<Player>();
+		this.board = null;
+		this.clientColour = null;
 	}
 
 	public void printArray(String[] array) {

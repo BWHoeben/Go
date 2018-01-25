@@ -16,19 +16,21 @@ import java.util.Vector;
 import GUI.GoGUIIntegrator;
 import errors.InvalidColourException;
 import errors.InvalidCoordinateException;
+import errors.InvalidMoveException;
 import errors.InvalidNumberOfArgumentsException;
 import errors.NoValidPortException;
 import errors.NotAnIntException;
 import errors.NotYetImplementedException;
 
 public class Server extends Thread {
-	private Set<ClientHandler> availableClients;
+	//private Set<ClientHandler> availableClients;
 	private Set<HashSet<ClientHandler>> clientsInGame;
 	private Map<Integer, ClientHandler> allClients;
 	private ServerSocket ssock;
 	private Set<Game> games;
 	private ClientHandler blackClient;
 	//private Set<Board> boards;
+	private Map<Integer, HashSet<ClientHandler>> clientsSorted;
 	private Map<ClientHandler, Board> clientBoardCombinations;
 
 	public static void main(String[] args) 
@@ -52,14 +54,14 @@ public class Server extends Thread {
 		// Initializing variables
 		// This hashSet holds all available clients,
 		// thus clients who are ready to play a game 
-		this.availableClients = new HashSet<ClientHandler>();
-
+		
 		// This hashSet hold all clients, thus all clients
 		// that are currently in a game as well as those that are not
 		this.allClients = new HashMap<Integer, ClientHandler>();
 
 		this.clientBoardCombinations = new HashMap<ClientHandler, Board>();
 		this.clientsInGame = new HashSet<HashSet<ClientHandler>>();
+		this.clientsSorted = new HashMap<Integer, HashSet<ClientHandler>>();
 		// Done with reading input from console, so closing scanner
 		scanner.close();
 	}
@@ -94,45 +96,23 @@ public class Server extends Thread {
 		while (true) {
 			Socket sock;
 			try {
-				if (this.availableClients.size() == 0) {
-					print("Waiting for client...");
-				} else {
-					print("Waiting for another client...");	
-				}
 				sock = this.ssock.accept();
 				ClientHandler handler = new ClientHandler(this, sock, i);
 				print("[client no . " + (i++) + " connected .]");
 				handler.announce();
 				handler.start();
 				addHandler(handler);	
-				if (this.availableClients.size() > 1) {
-					matchClients();
-				}
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 		}
 	}
 
-	public void matchClients() {
-		HashSet<ClientHandler> clientsInCurrentGame = new HashSet<ClientHandler>();
+	public void matched(HashSet<ClientHandler> matchedClients) {
 		Vector<String> clientNames = new Vector<String>();
-		if (availableClients.size() == 2) {
-			for (ClientHandler handler : availableClients) {
-				clientsInCurrentGame.add(handler);
-				clientNames.add(handler.getClientName());
-			}
-			clientsInGame.add(clientsInCurrentGame);
-			availableClients.removeAll(clientsInCurrentGame);
-
-		} else {
-			try {
-				throw new NotYetImplementedException("Not yet implemented!");
-			} catch (NotYetImplementedException e) {
-				e.printStackTrace();
-			}
+		for (ClientHandler handler : matchedClients) {
+			clientNames.add(handler.getClientName());
 		}
-
 		System.out.print("Clients matched! Starting game between ");
 		int i = 0;
 		for (String name : clientNames) {
@@ -145,11 +125,10 @@ public class Server extends Thread {
 				System.out.print(name + ", ");
 			}
 		}
-		ClientHandler firstClient = getFirstClient(clientsInCurrentGame);
-
-		// request settings
+		ClientHandler firstClient = getFirstClient(matchedClients);
+		this.clientsInGame.add(matchedClients);
 		firstClient.sendMessageToClient(Protocol.START + Protocol.DELIMITER1 +
-				clientsInCurrentGame.size() + Protocol.DELIMITER1 + Protocol.COMMAND_END);
+				matchedClients.size() + Protocol.DELIMITER1 + Protocol.COMMAND_END);
 	}
 
 	public ClientHandler getFirstClient(HashSet<ClientHandler> clients) {
@@ -219,15 +198,27 @@ public class Server extends Thread {
 			handleRequest(split, handler);
 		}
 	}
-	
+
 	public void handleRequest(String[] split, ClientHandler handler) {
-		print(String.format("#s requested a game with %s opponents", handler.getClientName(), split[1]));
-		handler.setRequestedNumberOfOpponents(Integer.parseInt(split[1]));
-		match();
+		print(String.format("%s requested a game with %s opponents", 
+				handler.getClientName(), split[1]));
+		int requestedNumberOfOpponents = Integer.parseInt(split[1]);
+		match(handler, requestedNumberOfOpponents);
 	}
-	
-	public void match() {
-		Map<Integer, Set<ClientHandler>> clientsSorted = new HashMap<Integer, Set<ClientHandler>>();
+
+	public void match(ClientHandler handler, int requestedNumberOfOpponents) {
+		if (this.clientsSorted.containsKey(requestedNumberOfOpponents)) {
+			HashSet<ClientHandler> setToUpdate = clientsSorted.get(requestedNumberOfOpponents);
+			setToUpdate.add(handler);
+			if (setToUpdate.size() == requestedNumberOfOpponents + 1) {
+				clientsSorted.remove(requestedNumberOfOpponents);
+				matched(setToUpdate);
+			}
+		} else {
+			HashSet<ClientHandler> setToAdd = new HashSet<ClientHandler>();
+			setToAdd.add(handler);
+			this.clientsSorted.put(requestedNumberOfOpponents, setToAdd);
+		}
 	}
 
 	public void handleQuit(ClientHandler handler) {
@@ -270,22 +261,18 @@ public class Server extends Thread {
 			print(String.format("Game ended but was not yet initialized. "
 					+ "Reason for end: %s", reason));
 			if (reason.equals(Protocol.TIMEOUT)) {
-				print(String.format("Time-out due to %s. Sending players back to lobby", handler.getClientName()));
+				print(String.format("Time-out due to %s. Disconnecting players.", handler.getClientName()));
 				String timeOutString = Protocol.ENDGAME + Protocol.DELIMITER1 + Protocol.TIMEOUT + Protocol.DELIMITER1;
 				for (ClientHandler handlerToAdd : clientsInMyGame) {
 					timeOutString = timeOutString + handlerToAdd.getClientName() + Protocol.DELIMITER1 + 0 + Protocol.DELIMITER1;
 				}
 				timeOutString = 	timeOutString + Protocol.COMMAND_END;	
 				broadcastToSetOfClients(timeOutString, clientsInMyGame);
-
+				for (ClientHandler handlerToShutDown : clientsInMyGame) {
+					handlerToShutDown.shutdown();
+				}
 			}
-			sendClientsBackToLobby(clientsInMyGame);
 		}
-	}
-
-	public void sendClientsBackToLobby(Set<ClientHandler> clients) {
-		this.availableClients.addAll(clients);
-		clients.removeAll(clients);
 	}
 
 	public ClientHandler getClientWithHighestScore(Map<ClientHandler, Integer> clientScores) {
@@ -309,15 +296,22 @@ public class Server extends Thread {
 		Move move = null;
 		if (split[1].equals(Protocol.PASS)) {
 			print(handler.getClientName() + " passed.");
-			System.out.println("Todo: insert check for subsequent passes!");
+			// did this clients also pass last time?
+			if (handler.passedOnPreviousTurn()) {
+				print(handler.getClientName() + 
+						"also passed during his/her previous turn. Terminating game.");
+				handleQuit(handler);
+			}
+			handler.pass(true);
 		} else {
+			handler.pass(false);
 			try {
 				move = new Move(split[1], board.getDimension(), handler.getColour());
 			} catch (InvalidCoordinateException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			gameOver = processMoveLocally(move.getIndex(), handler.getColour(), board);
+			gameOver = processMoveLocally(move, board);
 		}
 		// Check for pass
 		if (!gameOver) {
@@ -327,8 +321,12 @@ public class Server extends Thread {
 		}
 	}
 
-	public boolean processMoveLocally(int index, Colour colour, Board board) {
-		board.setIntersection(index, colour);
+	public boolean processMoveLocally(Move move, Board board) {
+		try {
+			board.setIntersection(move);
+		} catch (InvalidMoveException e) {
+			print("That's not a valid move!");
+		}
 		return board.gameOver();
 	}
 
@@ -449,12 +447,20 @@ public class Server extends Thread {
 	}
 
 	public void addHandler(ClientHandler handler) {
-		availableClients.add(handler);
-		allClients.put(handler.getNumber(), handler);
+		this.allClients.put(handler.getNumber(), handler);
 	}
 
 	public void removeHandler(ClientHandler handler) {
-		availableClients.remove(handler);
+		int index = 0;
+		allClients.remove(handler.getNumber());
+		for (Map.Entry<Integer, HashSet<ClientHandler>> entry : this.clientsSorted.entrySet()) {
+			if (entry.getValue().contains(handler)) {
+				index = entry.getKey();
+			}
+		}
+		if (index != 0) {
+		this.clientsSorted.get(index).remove(handler);
+		}
 	}
 
 	public void startGame(Set<Player> playersSet, int boardSize) {

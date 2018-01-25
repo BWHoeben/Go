@@ -16,8 +16,9 @@ public class Move {
 	public Move(String moveArg, int boardSizeArg, Colour colourArg) 
 			throws InvalidCoordinateException {
 		this.move = moveArg;
+		this.boardSize = boardSizeArg;
 		this.index = moveToIndex();
-		new Move(this.index, boardSizeArg, colourArg);
+		this.colour = colourArg;
 	}
 
 	public Move(int indexArg, int boardSizeArg, Colour colourArg) {
