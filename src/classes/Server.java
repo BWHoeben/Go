@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -13,7 +12,7 @@ import java.util.Scanner;
 import java.util.Set;
 import java.util.Vector;
 
-import GUI.GoGUIIntegrator;
+//import GUI.GoGUIIntegrator;
 import errors.InvalidColourException;
 import errors.InvalidCoordinateException;
 import errors.InvalidMoveException;
@@ -26,7 +25,9 @@ public class Server extends Thread {
 	private Set<HashSet<ClientHandler>> clientsInGame;
 	private Map<Integer, ClientHandler> allClients;
 	private ServerSocket ssock;
-	private Map<Integer, HashSet<ClientHandler>> clientsSorted; // key is number of desired opponents
+	
+	// key is number of desired opponents
+	private Map<Integer, HashSet<ClientHandler>> clientsSorted; 
 	private Map<ClientHandler, Board> clientBoardCombinations;
 
 	public static void main(String[] args) 
@@ -192,6 +193,10 @@ public class Server extends Thread {
 			endGame(handler, Protocol.TIMEOUT);
 		} else if (split[0].equals(Protocol.REQUESTGAME)) {
 			handleRequest(split, handler);
+		} else {
+			print("Recieved unknown command");
+			handler.sendMessageToClient(Protocol.ERROR + Protocol.DELIMITER1 
+					+ Protocol.UNKNOWN + Protocol.DELIMITER1 + Protocol.ENDGAME);
 		}
 	}
 
@@ -248,7 +253,8 @@ public class Server extends Thread {
 			for (int i = 0; i < clientsInMyGame.size(); i++) {
 				ClientHandler clientWithMaxScore = getClientWithHighestScore(clientScores);
 				stringToSend = stringToSend + clientWithMaxScore.getClientName() 
-				+ Protocol.DELIMITER1 + clientScores.get(clientWithMaxScore) + Protocol.DELIMITER1;
+					+ Protocol.DELIMITER1 + clientScores.get(clientWithMaxScore)
+					+ Protocol.DELIMITER1;
 				clientScores.remove(clientWithMaxScore);
 
 			}
@@ -260,10 +266,13 @@ public class Server extends Thread {
 			print(String.format("Game ended but was not yet initialized. "
 					+ "Reason for end: %s", reason));
 			if (reason.equals(Protocol.TIMEOUT)) {
-				print(String.format("Time-out due to %s. Disconnecting players.", handler.getClientName()));
-				String timeOutString = Protocol.ENDGAME + Protocol.DELIMITER1 + Protocol.TIMEOUT + Protocol.DELIMITER1;
+				print(String.format("Time-out due to %s. Disconnecting players.", 
+						handler.getClientName()));
+				String timeOutString = Protocol.ENDGAME + Protocol.DELIMITER1
+						+ Protocol.TIMEOUT + Protocol.DELIMITER1;
 				for (ClientHandler handlerToAdd : clientsInMyGame) {
-					timeOutString = timeOutString + handlerToAdd.getClientName() + Protocol.DELIMITER1 + 0 + Protocol.DELIMITER1;
+					timeOutString = timeOutString + handlerToAdd.getClientName() 
+						+ Protocol.DELIMITER1 + 0 + Protocol.DELIMITER1;
 				}
 				timeOutString = 	timeOutString + Protocol.COMMAND_END;	
 				broadcastToSetOfClients(timeOutString, clientsInMyGame);
@@ -329,7 +338,7 @@ public class Server extends Thread {
 			} catch (InvalidCoordinateException e) {
 				e.printStackTrace();
 			}
-			gameOver = processMoveLocally(move, board);
+			gameOver = processMoveLocally(move, board, handler);
 			if (handler.movesPerformed() >= getNumberOfStones(handler)) {
 				gameOver = true;
 				print(handler.getClientName() + " ran out of stones");
@@ -344,12 +353,14 @@ public class Server extends Thread {
 		}
 	}
 
-	public boolean processMoveLocally(Move move, Board board) {
+	public boolean processMoveLocally(Move move, Board board, ClientHandler handler) {
 		try {
 			board.setIntersection(move);
 			//processMoveInGui(move, board);
 		} catch (InvalidMoveException e) {
 			print("That's not a valid move!");
+			handler.sendMessageToClient(Protocol.ERROR + Protocol.DELIMITER1 
+					+ Protocol.INVALID + Protocol.DELIMITER1 + Protocol.COMMAND_END);
 		}
 		return board.gameOver();
 	}
@@ -377,8 +388,10 @@ public class Server extends Thread {
 		} else {
 			moveAsString = Protocol.PASS;
 		}
-		String stringToSend = Protocol.TURN + Protocol.DELIMITER1 + clientWhoMadeMove.getClientName() +
-				Protocol.DELIMITER1 + moveAsString + Protocol.DELIMITER1 + nextClient.getClientName() + Protocol.DELIMITER1 + Protocol.COMMAND_END;
+		String stringToSend = Protocol.TURN + Protocol.DELIMITER1 + 
+				clientWhoMadeMove.getClientName() +
+				Protocol.DELIMITER1 + moveAsString + Protocol.DELIMITER1 +
+				nextClient.getClientName() + Protocol.DELIMITER1 + Protocol.COMMAND_END;
 
 		broadcastToSetOfClients(stringToSend, clientsInThisGame);
 	}
@@ -438,8 +451,9 @@ public class Server extends Thread {
 		}
 		lastColour = Colour.BLACK;
 		
-		String stringToSend = Protocol.START + Protocol.DELIMITER1 + 
-				clientsInMyGame.size() + Protocol.DELIMITER1 + Protocol.DELIMITER2 + Protocol.DELIMITER1
+		String stringToSend = Protocol.START + Protocol.DELIMITER1 
+				+ clientsInMyGame.size() + Protocol.DELIMITER1 
+				+ Protocol.DELIMITER2 + Protocol.DELIMITER1
 				+ boardSize + Protocol.DELIMITER1;
 		
 		for (int i = 0; i < clientsInMyGame.size(); i++) {
@@ -450,7 +464,8 @@ public class Server extends Thread {
 
 
 		for (ClientHandler handlerToAdd : clientsInMyGame) {
-			String stringToSendToThisclient = stringToSend.replace(Protocol.DELIMITER2, handlerToAdd.getColour().toString());
+			String stringToSendToThisclient = 
+					stringToSend.replace(Protocol.DELIMITER2, handlerToAdd.getColour().toString());
 			stringToSendToThisclient = stringToSendToThisclient + Protocol.COMMAND_END;
 			handlerToAdd.sendMessageToClient(stringToSendToThisclient);
 		}
@@ -458,7 +473,7 @@ public class Server extends Thread {
 		//gogui.startGUI();
 		//gogui.setBoardSize(boardSize);
 		
-		Board board = new Board(boardSize, clientsInMyGame.size());//, gogui);
+		Board board = new Board(boardSize, clientsInMyGame.size()); //, gogui);
 		
 		for (ClientHandler clientInGame : clientsInMyGame) {
 			clientBoardCombinations.put(clientInGame, board);
@@ -505,5 +520,15 @@ public class Server extends Thread {
 		} else {
 			return (numOfIntersects / 2) + 1;
 		}
+	}
+	
+	// Return true if clients already exits
+	public boolean checkForSameName(String name) {
+		for (Map.Entry<Integer, ClientHandler> entry : this.allClients.entrySet()) {
+			if (entry.getValue().getClientName().equals(name)) {
+				return true;
+			}
+		}
+		return false;
 	}
 }

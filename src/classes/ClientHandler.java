@@ -69,15 +69,16 @@ public class ClientHandler extends Thread {
 		String[] split = msg.split(Protocol.DELIMITER1);
 		if (split[0].equals(Protocol.NAME)) {
 			this.clientName = split[1];
+			if (server.checkForSameName(this.clientName)) {
+				Server.print("Name already exists. Terminating connection.");
+				sendMessageToClient(Protocol.ERROR + Protocol.DELIMITER1 + 
+						Protocol.NAMETAKEN + Protocol.DELIMITER1 + Protocol.COMMAND_END);
+				shutdown();
+			}
 		}
 		if (!split[3].equals(Protocol.VERSIONNUMBER)) {
-			try {
-				throw new VersionsDoNotMatchException(String.format(
-						"Versions do not match! Recieved message: %s", msg));
-			} catch (VersionsDoNotMatchException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
+			sendMessageToClient(Protocol.ERROR + Protocol.DELIMITER1 
+					+ Protocol.INCOMPATIBLEPROTOCOL + Protocol.DELIMITER1 + Protocol.COMMAND_END);
 		}
 		for (int i = 5; i < split.length - 1; i++) {
 			if (!split[i].equals("0")) {
@@ -150,7 +151,7 @@ public class ClientHandler extends Thread {
 				}
 			}, 
 					timeOutSeconds * 1000 
-					);
+			);
 
 		}
 		try {
@@ -171,7 +172,7 @@ public class ClientHandler extends Thread {
 	public void shutdown() {
 		if (run) {
 			server.removeHandler(this);
-			server.print("[" + clientName + " disconnected]");
+			Server.print("[" + clientName + " disconnected]");
 			this.run = false;
 		}
 	}

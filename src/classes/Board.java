@@ -19,7 +19,7 @@ public class Board {
 	private Set<Group> groups;
 	private Colour lastMove;
 	private Map<Colour, Integer> score;
-	private List<Map<Integer, Colour>> boardSituations; 
+	private List<Colour[]> boardSituations; 
 	private int numberOfPlayers;
 	private GoGUIIntegrator gogui;
 	
@@ -44,7 +44,7 @@ public class Board {
 		}
 
 		score = new HashMap<Colour, Integer>();
-		boardSituations = new ArrayList<Map<Integer, Colour>>();
+		boardSituations = new ArrayList<Colour[]>();
 		
 		
 		// Black is the first one to move, so white is set as lastMove by default
@@ -73,8 +73,9 @@ public class Board {
 			updateScore();
 			copyBoard();
 		} else {
-				throw new InvalidMoveException(String.format(
-						"Invalid move! Index: %s Colour: %s", move.getIndex(), move.getColour().toString()));
+			throw new InvalidMoveException(String.format(
+				"Invalid move! Index: %s Colour: %s",
+				move.getIndex(), move.getColour().toString()));
 		}
 	}
 
@@ -105,26 +106,27 @@ public class Board {
 		return true;
 	}
 
-	public Map<Integer, Colour> currentSituation() {
+	public Colour[] currentSituation() {
 		// make a representation of the current situation
-		Map<Integer, Colour> currentSituation = new HashMap<Integer, Colour>();
+		Colour[] arrayToReturn = new Colour[dimension * dimension];
 		for (int i = 0; i < intersections.size(); i++) {
-			currentSituation.put(i, intersections.get(i).getColour());
+			arrayToReturn[i] = intersections.get(i).getColour();
 		}
-		return currentSituation;
+		return arrayToReturn;
 	}
 
 	// indicates whether this situation has already occurred
 	public boolean replicatesPreviousBoard(int index, Colour colour) {
 		// would this move replicate a previous board situation?
-		Map<Integer, Colour> currentSituation = currentSituation();
+		Colour[] currentSituation = currentSituation();
 		//update with hypothetical move
-		currentSituation.replace(index, colour);
-		if (boardSituations.contains(currentSituation)) {
-			System.out.println("Not an unique situation");
-			return true;
+		currentSituation[index] = colour;
+		for (Colour[] array : boardSituations) {
+			if (array.equals(currentSituation)) {
+				System.out.println("Not an unique situation");
+				return true;
+			}
 		}
-		System.out.println("Unique situation");
 		return false;
 	}
 

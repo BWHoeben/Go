@@ -1,7 +1,6 @@
 package classes;
 
 import errors.InvalidColourException;
-import javafx.scene.paint.Color;
 
 public enum Colour {
 	EMPTY, BLACK, WHITE, ORANGE, PINK;

@@ -3,7 +3,6 @@ package classes;
 import java.util.Scanner;
 
 import errors.InvalidCoordinateException;
-import errors.NotAnIntException;
 
 public class HumanPlayer extends Player {
 
@@ -17,8 +16,7 @@ public class HumanPlayer extends Player {
 	@Override
 	public Move determineMove(Board board) {
 		int boardSize = board.getDimension();
-		while (true)
-		{
+		while (true) {
 			System.out.println("Please enter row_column, PASS or QUIT: ");			
 			String answer = scanner.nextLine();
 			if (answer.toUpperCase().equals(Protocol.PASS)) {
@@ -34,7 +32,8 @@ public class HumanPlayer extends Player {
 			} else if (isValidAnswer(answer, board)) {	
 				pass(false);
 				try {
-					System.out.println("Valid move. Index: " + new Move(answer, board.getDimension(), this.getColour()).getIndex());
+					System.out.println("Valid move. Index: " + 
+							new Move(answer, board.getDimension(), this.getColour()).getIndex());
 				} catch (InvalidCoordinateException e1) {
 					// TODO Auto-generated catch block
 					e1.printStackTrace();

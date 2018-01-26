@@ -31,6 +31,13 @@ public class Protocol {
 	public static final String YES = "YES";
 	public static final String NO = "NO";
 	
+	public static final String ERROR = "ERROR";
+	public static final String UNKNOWN = "UNKNOWNCOMMAND";
+	public static final String INVALID = "INVALIDMOVE";
+	public static final String NAMETAKEN = "NAMETAKEN";
+	public static final String INCOMPATIBLEPROTOCOL = "INCOMPATIBLEPROTOCOL";
+	public static final String OTHER = "OTHER";
+	
 	public Protocol() {
 		
 	}

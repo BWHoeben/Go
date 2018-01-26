@@ -17,7 +17,6 @@ import java.util.Scanner;
 import java.util.Set;
 
 import GUI.GoGUIIntegrator;
-import errors.AlreadyPassedException;
 import errors.CouldNotConnectException;
 import errors.InvalidColourException;
 import errors.InvalidCommandException;
@@ -52,12 +51,13 @@ public class Client extends Thread {
 			throws InvalidHostException, NoValidPortException, InvalidCommandException {
 
 		//askForInput();
+
 		try {
 			useDefaultInput();
-
 		} catch (UnknownHostException e) {
 			e.printStackTrace();
 		}
+
 	}
 
 	public static void askForInput() 
@@ -88,16 +88,16 @@ public class Client extends Thread {
 
 		int port = 0;
 		InetAddress host = null;
-
-		print("Please provide host-ip: ");
-		String hostString = SCANNER.nextLine();
-		try {
-			host = InetAddress.getByName(hostString);
-		} catch (UnknownHostException e) {
-			SCANNER.close();
-			throw new InvalidHostException("Invalid host");
+		while (true) {
+			print("Please provide host-ip: ");
+			String hostString = SCANNER.nextLine();
+			try {
+				host = InetAddress.getByName(hostString);
+				break;
+			} catch (UnknownHostException e) {
+				print("Invalid host, try again");
+			}
 		}
-
 		print("Please provide port: ");
 		String portString = SCANNER.nextLine();
 		try {
@@ -144,7 +144,7 @@ public class Client extends Thread {
 	}
 
 	public static void useDefaultInput() throws UnknownHostException {
-		isHuman = true;
+		isHuman = false;
 		print("Playing as Computer.");
 		String name = randomString();
 
@@ -185,7 +185,7 @@ public class Client extends Thread {
 
 		//this.opponents = askForOpponents();
 
-		this.opponents = 1;
+		this.opponents = 3;
 
 		this.name = name;
 		try {
@@ -244,9 +244,22 @@ public class Client extends Thread {
 			handleMessageTurn(splitString, msg);
 		} else if (splitString[0].equals(Protocol.ENDGAME)) {
 			handleMessageEndGame(splitString, msg);
+		} else if (splitString[0].equals(Protocol.ERROR))	 {
+			handleMessageError(splitString, msg);
 		} else {
 			throw new InvalidCommandException(String.format(
 					"Server provided unkown arguments. Recieved message: %s", msg));
+		}
+	}
+
+	public void handleMessageError(String[] split, String msg) {
+		if (split[1].equals(Protocol.NAMETAKEN)) {
+			print("Name is occupied. Please try to reconnect with another name.");
+			shutdown();
+		} else {
+			print("Recieved error message from server. Message was: " + msg);
+			print("Terminating");
+			shutdown();
 		}
 	}
 
@@ -274,7 +287,8 @@ public class Client extends Thread {
 				e.printStackTrace();
 			}
 
-			// Case Start <number of players> <colour of this client> <boardsize> <player1> <player2> (3 etc.) to all players 
+			// Case Start <number of players> <colour of this client> 
+			// <boardsize> <player1> <player2> (3 etc.) to all players 
 		} else if (split.length > 2) {
 
 			// the other client decided on the game settings, lets implement them
@@ -450,7 +464,8 @@ public class Client extends Thread {
 				playerWhoJustHadATurn.pass(true);
 
 
-			} else if (!split[2].equals(Protocol.FIRST) && !split[1].equals(clientPlayer.getName())) {
+			} else if (!split[2].equals(Protocol.FIRST) 
+					&& !split[1].equals(clientPlayer.getName())) {
 				print("Processing opponents move");
 				playerWhoJustHadATurn.pass(false);
 				Move move;
