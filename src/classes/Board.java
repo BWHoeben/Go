@@ -116,18 +116,15 @@ public class Board {
 
 	// indicates whether this situation has already occurred
 	public boolean replicatesPreviousBoard(int index, Colour colour) {
-		
-		
 		// would this move replicate a previous board situation?
 		Map<Integer, Colour> currentSituation = currentSituation();
 		//update with hypothetical move
 		currentSituation.replace(index, colour);
-		for (Map<Integer, Colour> previousSituation : boardSituations) {
-			if (previousSituation.equals(currentSituation)) {
-				System.out.println("Replicates a previous scenario!");
-				return true;
-			}
+		if (boardSituations.contains(currentSituation)) {
+			System.out.println("Not an unique situation");
+			return true;
 		}
+		System.out.println("Unique situation");
 		return false;
 	}
 
@@ -139,8 +136,6 @@ public class Board {
 			Colour colour = entry.getKey();
 			int sum = occupiedArea(colour) + enclosedArea(colour);
 			score.replace(colour, sum);
-			System.out.println(colour.toString() + " Enclosed: " + enclosedArea(colour)
-				+ " Occupied: " + occupiedArea(colour));
 		}
 	}
 
@@ -179,8 +174,6 @@ public class Board {
 			}
 		}
 		
-		System.out.println("Number of empty groups: " + emptyGroups.size());
-
 		// a group is enclosed if all neighbours have a similar colour
 		for (Group group : emptyGroups) {
 			Set<Intersection> adjacentIntersections = adjacentIntersectionsGroup(group);

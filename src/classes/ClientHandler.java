@@ -105,9 +105,13 @@ public class ClientHandler extends Thread {
 			while (msg != null && run) {
 				server.handleMessage(msg, this);
 				msg = in.readLine();
-				System.out.println("Message recieved");
 				cancelTimers();
-				System.out.println(msg);
+				if (msg != null) {
+					System.out.println("Message recieved");
+					System.out.println(msg);
+				} else {
+					shutdown();
+				}
 			}
 		} catch (IOException e) {
 			shutdown();
@@ -182,5 +186,9 @@ public class ClientHandler extends Thread {
 	
 	public void incrementNumberOfMoves() {
 		movesPerformed++;
+	}
+	
+	public void resetMoves() {
+		this.movesPerformed = 0;
 	}
 }

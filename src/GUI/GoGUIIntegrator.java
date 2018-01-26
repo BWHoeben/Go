@@ -118,4 +118,8 @@ public class GoGUIIntegrator implements GOGUI {
         createWrappedObject();
         wrappee.countDownConfigurationLatch();
     }
+    
+    public void quit() {
+    		System.exit(0);
+    }
 }

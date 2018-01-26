@@ -354,4 +354,8 @@ public class GOGUIImpl extends Application {
 			e.printStackTrace();
 		}
 	}
+	
+	public void quit() {
+		System.exit(0);
+	}
 }

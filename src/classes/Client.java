@@ -144,7 +144,7 @@ public class Client extends Thread {
 	}
 
 	public static void useDefaultInput() throws UnknownHostException {
-		isHuman = false;
+		isHuman = true;
 		print("Playing as Computer.");
 		String name = randomString();
 
@@ -164,10 +164,22 @@ public class Client extends Thread {
 		}
 	}
 	public Client(String name, InetAddress host, int port) throws CouldNotConnectException {
-		try {
-			this.sock = new Socket(host, port);
-		} catch (IOException e) {
-			throw new CouldNotConnectException("Could not connect to server!");
+		int i = 0;
+		while (true) {
+			try {
+				this.sock = new Socket(host, port);
+				break;
+			} catch (IOException e) {
+				i++;
+				print(String.format("Could not connect to server! "
+						+ "Trying again in %s seconds", 5 * i));
+				try {
+					Thread.sleep(5000 * i);
+				} catch (InterruptedException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+			}
 		}
 		print("Connection succesfull!");
 
@@ -274,9 +286,11 @@ public class Client extends Thread {
 			implementPlayers(split, msg);
 
 			// start the GUI
-			this.gogui = new GoGUIIntegrator(false, false, boardSize);
-			gogui.startGUI();
-			gogui.setBoardSize(boardSize);
+			if (this.gogui == null) {
+				this.gogui = new GoGUIIntegrator(false, false, boardSize);
+				this.gogui.startGUI();
+			}
+			this.gogui.setBoardSize(boardSize);
 			// create a new board
 			this.board = new Board(boardSize, numberOfPlayers, gogui);
 		}
@@ -323,9 +337,9 @@ public class Client extends Thread {
 
 	public void setupGame(String[] stringArray) 
 			throws NotAnIntException, NotYetImplementedException {
-		
+
 		print("YOOOLOOOOOO");
-		
+
 		if (stringArray.length <= 5) {
 			try {
 				throw new InvalidCommandException("The server provided not enough arguments");
@@ -534,6 +548,7 @@ public class Client extends Thread {
 				break;
 			} else if (answer.equals(Protocol.NO)) {
 				endGame();	
+				gogui.quit();
 				break;
 			} else {
 				print("Invalid command try again.");
@@ -738,6 +753,7 @@ public class Client extends Thread {
 		this.players = new HashSet<Player>();
 		this.board = null;
 		this.clientColour = null;
+		this.gogui.clearBoard();
 	}
 
 	public void printArray(String[] array) {

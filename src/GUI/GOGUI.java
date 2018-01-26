@@ -73,4 +73,5 @@ public interface GOGUI {
      */
     void stopGUI();
 
+    void quit();
 }

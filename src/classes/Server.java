@@ -23,14 +23,10 @@ import errors.NotAnIntException;
 import errors.NotYetImplementedException;
 
 public class Server extends Thread {
-	//private Set<ClientHandler> availableClients;
 	private Set<HashSet<ClientHandler>> clientsInGame;
 	private Map<Integer, ClientHandler> allClients;
 	private ServerSocket ssock;
-	private Set<Game> games;
-	//private ClientHandler blackClient;
-	//private Set<Board> boards;
-	private Map<Integer, HashSet<ClientHandler>> clientsSorted;
+	private Map<Integer, HashSet<ClientHandler>> clientsSorted; // key is number of desired opponents
 	private Map<ClientHandler, Board> clientBoardCombinations;
 
 	public static void main(String[] args) 
@@ -257,6 +253,9 @@ public class Server extends Thread {
 
 			}
 			broadcastToSetOfClients(stringToSend + Protocol.COMMAND_END, clientsInMyGame);
+
+			cleanUpGame(handler);
+		
 		} catch (NullPointerException e) {
 			print(String.format("Game ended but was not yet initialized. "
 					+ "Reason for end: %s", reason));
@@ -272,6 +271,25 @@ public class Server extends Thread {
 					handlerToShutDown.shutdown();
 				}
 			}
+			cleanUpGame(handler);
+		}
+	}
+	
+	public void cleanUpGame(ClientHandler handler) {
+		Set<ClientHandler> clientsInMyGame = getClientsInMyGame(handler);
+		Set<ClientHandler> setToRemove = new HashSet<ClientHandler>();
+		for (Set<ClientHandler> clientsInAGame : clientsInGame) {
+			if (clientsInAGame.contains(handler)) {
+				setToRemove = clientsInAGame;
+				break;
+			}
+		}
+		
+		clientsInGame.remove(setToRemove);
+		
+		for (ClientHandler handlerToClean : clientsInMyGame) {
+			handlerToClean.resetMoves();
+			clientBoardCombinations.remove(handlerToClean);
 		}
 	}
 
@@ -329,7 +347,7 @@ public class Server extends Thread {
 	public boolean processMoveLocally(Move move, Board board) {
 		try {
 			board.setIntersection(move);
-			processMoveInGui(move, board);
+			//processMoveInGui(move, board);
 		} catch (InvalidMoveException e) {
 			print("That's not a valid move!");
 		}
@@ -436,11 +454,11 @@ public class Server extends Thread {
 			stringToSendToThisclient = stringToSendToThisclient + Protocol.COMMAND_END;
 			handlerToAdd.sendMessageToClient(stringToSendToThisclient);
 		}
-		GoGUIIntegrator gogui = new GoGUIIntegrator(false, false, boardSize);
-		gogui.startGUI();
-		gogui.setBoardSize(boardSize);
+		//GoGUIIntegrator gogui = new GoGUIIntegrator(false, false, boardSize);
+		//gogui.startGUI();
+		//gogui.setBoardSize(boardSize);
 		
-		Board board = new Board(boardSize, clientsInMyGame.size(), gogui);
+		Board board = new Board(boardSize, clientsInMyGame.size());//, gogui);
 		
 		for (ClientHandler clientInGame : clientsInMyGame) {
 			clientBoardCombinations.put(clientInGame, board);
@@ -479,13 +497,6 @@ public class Server extends Thread {
 		}
 	}
 
-	public void startGame(Set<Player> playersSet, int boardSize) {
-		GoGUIIntegrator gogui = new GoGUIIntegrator(true, true, boardSize);
-		//gogui.startGUI();
-		gogui.setBoardSize(boardSize);
-		new Game(playersSet, boardSize, gogui);
-	}
-	
 	public int getNumberOfStones(ClientHandler handler) {
 		Board board = getBoardOfClient(handler);
 		int numOfIntersects = board.getDimension() * board.getDimension();
