@@ -1,6 +1,8 @@
 package GUI;
 
+import classes.Colour;
 import javafx.application.Platform;
+import javafx.scene.paint.Color;
 
 /**
  * Created by daan.vanbeek on 13-12-16.
@@ -28,7 +30,7 @@ public class GoGUIIntegrator implements GOGUI {
     }
 
     @Override
-    public synchronized void addStone(int x, int y, boolean white) {
+    public synchronized void addStone(int x, int y, Colour white) {
         Platform.runLater(() -> {
             try {
                 wrappee.addStone(x, y, white);

@@ -14,11 +14,11 @@ public class Intersection {
 	}
 
 	public int getRow() {
-		return  index % dimensionOfBoard;
+		return indexToRow(index, dimensionOfBoard);
 	}
 
 	public int getCol() {
-		return index - getRow();		
+		return indexToCol(index, dimensionOfBoard);		
 	}
 
 	public Colour getColour() {
@@ -34,11 +34,11 @@ public class Intersection {
 	}
 
 	public int indexToRow(int indexArg, int dimensionOfBoardArg) {
-		return indexArg % dimensionOfBoardArg;
+		return indexArg / dimensionOfBoardArg;
 	}
 
 	public int indexToCol(int indexArg, int dimensionOfBoardArg) {
-		return indexArg - ((indexArg % dimensionOfBoardArg) * dimensionOfBoardArg);
+		return indexArg % dimensionOfBoardArg;
 	}
 
 	public int calculateIndex(int col, int row, int dimensionOfBoardArg) {

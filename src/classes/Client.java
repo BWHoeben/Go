@@ -144,8 +144,8 @@ public class Client extends Thread {
 	}
 
 	public static void useDefaultInput() throws UnknownHostException {
-		isHuman = true;
-		print("Playing as human.");
+		isHuman = false;
+		print("Playing as Computer.");
 		String name = randomString();
 
 		print(String.format("Welcome %s!", name));
@@ -274,16 +274,11 @@ public class Client extends Thread {
 			implementPlayers(split, msg);
 
 			// start the GUI
-			if (numberOfPlayers == 2) {
-				this.gogui = new GoGUIIntegrator(false, false, boardSize);
-				gogui.startGUI();
-				gogui.setBoardSize(boardSize);
-				// create a new board
-				this.board = new Board(boardSize, numberOfPlayers, gogui);
-			} else {
-				print("Gui not ready for multiple players");
-				this.board = new Board(boardSize, numberOfPlayers);
-			}
+			this.gogui = new GoGUIIntegrator(false, false, boardSize);
+			gogui.startGUI();
+			gogui.setBoardSize(boardSize);
+			// create a new board
+			this.board = new Board(boardSize, numberOfPlayers, gogui);
 		}
 	}
 
@@ -291,6 +286,7 @@ public class Client extends Thread {
 		this.numberOfPlayers = Integer.parseInt(split[1]); 
 		try {
 			this.clientColour = Colour.getColour(split[2]);
+			print("You're playing as " + this.clientColour.toString());
 		} catch (InvalidColourException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -300,28 +296,36 @@ public class Client extends Thread {
 
 	public void implementPlayers(String[] split, String msg) {
 		String[] playerNames = Arrays.copyOfRange(split, 4, split.length);
-		if (playerNames.length == 2) {
+		if (numberOfPlayers == 2) {
 			Colour opponentColour = clientColour.next(numberOfPlayers);
+			this.clientPlayer = generateClientPlayer(clientColour);
+			players.add(this.clientPlayer);
+			String opponentName;
+			if (playerNames[0].equals(clientPlayer.getName())) {
+				opponentName = playerNames[1];
+			} else {
+				opponentName = playerNames[0];
+			}
+			players.add(new OpponentPlayer(opponentName, opponentColour));
+		} else {
+			Colour colourToAdd = Colour.BLACK;
 			for (int i = 0; i < playerNames.length; i++) {
 				if (playerNames[i].equals(getClientName())) {
-					this.clientPlayer = generateClientPlayer(clientColour);
+					this.clientPlayer = generateClientPlayer(colourToAdd);
 					players.add(this.clientPlayer);
 				} else {
-					players.add(new OpponentPlayer(playerNames[i], opponentColour));
+					players.add(new OpponentPlayer(playerNames[i], colourToAdd));
 				}
-			}
-		} else {
-			try {
-				throw new NotYetImplementedException(String.format("Not yet implemented. Message: %s", msg));
-			} catch (NotYetImplementedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				colourToAdd = colourToAdd.next(numberOfPlayers);
 			}
 		}
 	}
 
 	public void setupGame(String[] stringArray) 
 			throws NotAnIntException, NotYetImplementedException {
+		
+		print("YOOOLOOOOOO");
+		
 		if (stringArray.length <= 5) {
 			try {
 				throw new InvalidCommandException("The server provided not enough arguments");
@@ -434,6 +438,7 @@ public class Client extends Thread {
 
 			} else if (!split[2].equals(Protocol.FIRST) && !split[1].equals(clientPlayer.getName())) {
 				print("Processing opponents move");
+				playerWhoJustHadATurn.pass(false);
 				Move move;
 				try {
 					move = new Move(split[2], boardSize, playerWhoJustHadATurn.getColour());
@@ -481,7 +486,7 @@ public class Client extends Thread {
 	public void processMoveInGui(Move move) {
 		int row = move.getRow();
 		int col = move.getCol();
-		gogui.addStone(row, col, move.getColour().equals(Colour.WHITE));
+		gogui.addStone(col, row, move.getColour());
 	}
 
 	// CASE: ENDGAME REASON PLAYER1 SCORE PLAYER2 SCORE PLAYER3 SCORE... 
@@ -507,7 +512,7 @@ public class Client extends Thread {
 					playersToCheck.put(getPlayer(split[(i * 2) + 2]), 
 							Integer.parseInt(split[(i * 2) + 3]));
 				}
-				checkScores(playersToCheck, board);
+				//checkScores(playersToCheck, board);
 			} catch (NullPointerException e) {
 				print("Unanble to verify scores with local data");
 			}
@@ -645,7 +650,7 @@ public class Client extends Thread {
 			return new HumanPlayer(this.name, colour, Client.SCANNER);
 		} else {
 			Strategy strategy = new RandomStrategy();
-			return new ComputerPlayer(colour, strategy);	
+			return new ComputerPlayer(this.name, colour, strategy);	
 		}
 	}
 

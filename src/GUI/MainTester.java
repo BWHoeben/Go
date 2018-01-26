@@ -1,5 +1,8 @@
 package GUI;
 
+import classes.Colour;
+import javafx.scene.paint.Color;
+
 /**
  * Example on how to use the GOGUI
  *
@@ -8,10 +11,18 @@ package GUI;
 public class MainTester {
 
     public static void main(String[] args) {
-        GoGUIIntegrator gogui = new GoGUIIntegrator(true, true, 9);
+        GoGUIIntegrator gogui = new GoGUIIntegrator(false, false, 5);
         gogui.startGUI();
-        gogui.setBoardSize(9);
-
+        gogui.setBoardSize(5);
+        
+        gogui.addStone(0, 0, Colour.WHITE);
+        gogui.addStone(0, 1, Colour.BLACK);
+        gogui.addStone(1, 1, Colour.PINK);
+        gogui.addStone(1, 0, Colour.ORANGE);
+        //gogui.removeStone(0, 0);
+        
+        
+        /**
         gogui.addStone(0, 0, false);
         gogui.addStone(0, 2, true);
         gogui.addStone(0, 3, false);
@@ -86,5 +97,6 @@ public class MainTester {
         gogui.addAreaIndicator(8, 4, true);
 
         gogui.addHintIndicator(4, 4);
+        **/
     }
 }

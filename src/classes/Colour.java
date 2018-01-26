@@ -1,6 +1,7 @@
 package classes;
 
 import errors.InvalidColourException;
+import javafx.scene.paint.Color;
 
 public enum Colour {
 	EMPTY, BLACK, WHITE, ORANGE, PINK;
@@ -8,16 +9,6 @@ public enum Colour {
 	public Colour first() {
 		return BLACK;
 	}
-
-	//public Colour next() {
-	//	switch (this) {
-	//		case BLACK : return WHITE;
-	//		case WHITE : return ORANGE;
-	//		case ORANGE : return PINK;
-	//		case PINK : return BLACK;
-	//		default : return null;
-	//	}
-	//}
 
 	public Colour next(int numberOfPlayers) {
 		if (numberOfPlayers == 2) {

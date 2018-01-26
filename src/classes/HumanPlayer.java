@@ -27,14 +27,18 @@ public class HumanPlayer extends Player {
 					System.out.println("Last move was also a pass.");
 				}
 				pass(true);
-
 				return new Move(Protocol.PASS);
 			} else if (answer.toUpperCase().equals(Protocol.QUIT)) {
 				System.out.println("Terminate game.");
 				return new Move(Protocol.QUIT);
 			} else if (isValidAnswer(answer, board)) {	
 				pass(false);
-				System.out.println("Valid move");
+				try {
+					System.out.println("Valid move. Index: " + new Move(answer, board.getDimension(), this.getColour()).getIndex());
+				} catch (InvalidCoordinateException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
 				try {
 					return new Move(answer, boardSize, this.getColour());
 				} catch (InvalidCoordinateException e) {

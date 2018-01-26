@@ -23,6 +23,7 @@ public class ClientHandler extends Thread {
 	private HashSet<Timer> timers = new HashSet<Timer>();
 	private boolean run = true;
 	private boolean lastMoveWasPass = false;
+	private int movesPerformed;
 
 	/**
 	 * Constructs a ClientHandler object
@@ -34,6 +35,7 @@ public class ClientHandler extends Thread {
 		this.number = number;
 		in = new BufferedReader(new InputStreamReader(sockArg.getInputStream()));
 		out = new BufferedWriter(new OutputStreamWriter(sockArg.getOutputStream()));
+		this.movesPerformed = 0;
 	}
 
 	public int getNumber() {
@@ -172,5 +174,13 @@ public class ClientHandler extends Thread {
 
 	public String getClientName() {
 		return clientName;
+	}
+	
+	public int movesPerformed() {
+		return movesPerformed;
+	}
+	
+	public void incrementNumberOfMoves() {
+		movesPerformed++;
 	}
 }

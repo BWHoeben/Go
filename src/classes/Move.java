@@ -25,8 +25,8 @@ public class Move {
 		this.index = indexArg;
 		this.boardSize = boardSizeArg;
 		this.colour = colourArg;
-		this.row = this.index % this.boardSize;
-		this.col = this.index - this.row;
+		this.row = indexToRow(index, boardSizeArg);
+		this.col = indexToCol(index, boardSizeArg);
 		this.move = row + Protocol.DELIMITER2 + col;
 	}
 	
@@ -74,5 +74,13 @@ public class Move {
 	
 	public Colour getColour() {
 		return this.colour;
+	}
+	
+	public int indexToRow(int indexArg, int dimensionOfBoardArg) {
+		return indexArg / dimensionOfBoardArg;
+	}
+
+	public int indexToCol(int indexArg, int dimensionOfBoardArg) {
+		return indexArg % dimensionOfBoardArg;
 	}
 }

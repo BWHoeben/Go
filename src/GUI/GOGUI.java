@@ -1,5 +1,8 @@
 package GUI;
 
+import classes.Colour;
+import javafx.scene.paint.Color;
+
 /**
  * Created by daan.vanbeek on 13-12-16.
  */
@@ -21,7 +24,7 @@ public interface GOGUI {
      * @param white if true then a white stone will be added, otherwise a black stone will be added
      * @throws InvalidCoordinateException when x or y coordinate fall outside of the board.
      */
-    void addStone(int x, int y, boolean white) throws InvalidCoordinateException;
+    void addStone(int x, int y, Colour white) throws InvalidCoordinateException;
 
     /**
      * Removes any existing stone at the given position.

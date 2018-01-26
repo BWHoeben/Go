@@ -28,7 +28,7 @@ public class Server extends Thread {
 	private Map<Integer, ClientHandler> allClients;
 	private ServerSocket ssock;
 	private Set<Game> games;
-	private ClientHandler blackClient;
+	//private ClientHandler blackClient;
 	//private Set<Board> boards;
 	private Map<Integer, HashSet<ClientHandler>> clientsSorted;
 	private Map<ClientHandler, Board> clientBoardCombinations;
@@ -54,7 +54,7 @@ public class Server extends Thread {
 		// Initializing variables
 		// This hashSet holds all available clients,
 		// thus clients who are ready to play a game 
-		
+
 		// This hashSet hold all clients, thus all clients
 		// that are currently in a game as well as those that are not
 		this.allClients = new HashMap<Integer, ClientHandler>();
@@ -304,26 +304,32 @@ public class Server extends Thread {
 			}
 			handler.pass(true);
 		} else {
+			handler.incrementNumberOfMoves();
 			handler.pass(false);
 			try {
 				move = new Move(split[1], board.getDimension(), handler.getColour());
 			} catch (InvalidCoordinateException e) {
-				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 			gameOver = processMoveLocally(move, board);
+			if (handler.movesPerformed() >= getNumberOfStones(handler)) {
+				gameOver = true;
+				print(handler.getClientName() + " ran out of stones");
+			}
 		}
 		// Check for pass
 		if (!gameOver) {
 			communicateMove(move, handler);
 		} else {
 			print("Game has ended");
+			endGame(handler, Protocol.FINISHED);
 		}
 	}
 
 	public boolean processMoveLocally(Move move, Board board) {
 		try {
 			board.setIntersection(move);
+			processMoveInGui(move, board);
 		} catch (InvalidMoveException e) {
 			print("That's not a valid move!");
 		}
@@ -378,68 +384,78 @@ public class Server extends Thread {
 
 	// handler = first player!
 	public void handleSettings(int boardSize, ClientHandler handler, Colour firstColour) {
+		ClientHandler blackClient = null;
 		handler.setColour(firstColour);
-		Colour secondColour = null;
-		Set<ClientHandler> clientsInMyGame = getClientsInMyGame(handler);
-
-		Set<Player> players = new HashSet<Player>();
 		if (firstColour.equals(Colour.BLACK)) {
-			secondColour = Colour.WHITE;
-
-		} else {
-			secondColour = Colour.BLACK;
+			blackClient = handler;
 		}
-		if (clientsInMyGame.size() == 2) {
-			for (ClientHandler clientInGame : clientsInMyGame) {
-				if (clientInGame.equals(handler)) {
-					Player player = new OpponentPlayer(clientInGame.getClientName(), firstColour);
-					players.add(player);	
-					if (firstColour.equals(Colour.BLACK)) {
-						blackClient = clientInGame;
-					}
-				} else {
-					clientInGame.setColour(secondColour);
-					Player player = new OpponentPlayer(clientInGame.getClientName(), secondColour);
-					players.add(player);
-					if (secondColour.equals(Colour.BLACK)) {
-						blackClient = clientInGame;
-					}
-				}
+		Set<ClientHandler> clientsInMyGame = getClientsInMyGame(handler);
+		Set<Player> players = new HashSet<Player>();
+		ClientHandler lastClient = handler;
+		List<Integer> numbersOfClientsInThisGame = new ArrayList<Integer>();
+		Set<String> playerNames = new HashSet<String>();
+		Map<Colour, ClientHandler> clientColourCombinations = new HashMap<Colour, ClientHandler>();
+		clientColourCombinations.put(firstColour, handler);
+		playerNames.add(handler.getClientName());
+
+		for (ClientHandler handlerWithNumber : clientsInMyGame) {
+			numbersOfClientsInThisGame.add(handlerWithNumber.getNumber());
+		}
+		Colour lastColour = firstColour;
+		for (int i = 0; i < clientsInMyGame.size() - 1; i++) {
+			int numberOfNextClient = getNextNumberOfList(
+					numbersOfClientsInThisGame, lastClient.getNumber());
+			ClientHandler nextClient = allClients.get(numberOfNextClient);
+			Colour nextColour = lastColour.next(clientsInMyGame.size());
+			Player player = new OpponentPlayer(nextClient.getClientName(), nextColour);
+			players.add(player);
+			if (nextColour.equals(Colour.BLACK)) {
+				blackClient = nextClient;
 			}
-
-			String stringToSend = Protocol.START + Protocol.DELIMITER1 + 
-					clientsInMyGame.size() +
-					Protocol.DELIMITER1 + secondColour.toString() + Protocol.DELIMITER1 + 
-					boardSize + Protocol.DELIMITER1;
-
-			Set<String> playerNames = new HashSet<String>();
-			for (ClientHandler handlerToAdd : clientsInMyGame) {
-				playerNames.add(handlerToAdd.getClientName());
-				stringToSend = stringToSend + handlerToAdd.getClientName() + Protocol.DELIMITER1;
-			}
-
-			stringToSend = stringToSend + Protocol.COMMAND_END;
-			broadcastToSetOfClients(stringToSend, clientsInMyGame);
-
-			Board board = new Board(boardSize, clientsInMyGame.size());
-
-			for (ClientHandler clientInGame : clientsInMyGame) {
-				clientBoardCombinations.put(clientInGame, board);
-			}
-
-			broadcastToSetOfClients(Protocol.TURN + Protocol.DELIMITER1 + 
-					blackClient.getClientName() 	+ Protocol.DELIMITER1 + 
-					Protocol.FIRST + Protocol.DELIMITER1 + blackClient.getClientName()
-					+ Protocol.DELIMITER1 + Protocol.COMMAND_END, clientsInMyGame);
-		} else {
-			try {
-				throw new NotYetImplementedException("Not yet implemented");
-			} catch (NotYetImplementedException e) {
-				e.printStackTrace();
-			}
+			nextClient.setColour(nextColour);
+			playerNames.add(nextClient.getClientName());
+			clientColourCombinations.put(nextColour, nextClient);
+			lastClient = nextClient;
+			lastColour = nextColour;
+		}
+		lastColour = Colour.BLACK;
+		
+		String stringToSend = Protocol.START + Protocol.DELIMITER1 + 
+				clientsInMyGame.size() + Protocol.DELIMITER1 + Protocol.DELIMITER2 + Protocol.DELIMITER1
+				+ boardSize + Protocol.DELIMITER1;
+		
+		for (int i = 0; i < clientsInMyGame.size(); i++) {
+			ClientHandler clientToAdd = clientColourCombinations.get(lastColour);
+			stringToSend = stringToSend + clientToAdd.getClientName() + Protocol.DELIMITER1;
+			lastColour = lastColour.next(clientsInMyGame.size());			
 		}
 
 
+		for (ClientHandler handlerToAdd : clientsInMyGame) {
+			String stringToSendToThisclient = stringToSend.replace(Protocol.DELIMITER2, handlerToAdd.getColour().toString());
+			stringToSendToThisclient = stringToSendToThisclient + Protocol.COMMAND_END;
+			handlerToAdd.sendMessageToClient(stringToSendToThisclient);
+		}
+		GoGUIIntegrator gogui = new GoGUIIntegrator(false, false, boardSize);
+		gogui.startGUI();
+		gogui.setBoardSize(boardSize);
+		
+		Board board = new Board(boardSize, clientsInMyGame.size(), gogui);
+		
+		for (ClientHandler clientInGame : clientsInMyGame) {
+			clientBoardCombinations.put(clientInGame, board);
+		}
+
+		broadcastToSetOfClients(Protocol.TURN + Protocol.DELIMITER1 + 
+				blackClient.getClientName() 	+ Protocol.DELIMITER1 + 
+				Protocol.FIRST + Protocol.DELIMITER1 + blackClient.getClientName()
+				+ Protocol.DELIMITER1 + Protocol.COMMAND_END, clientsInMyGame);
+	}
+	
+	public void processMoveInGui(Move move, Board board) {
+		int row = move.getRow();
+		int col = move.getCol();
+		board.getGoGui().addStone(col, row, move.getColour());
 	}
 
 	public static void print(String msg) {
@@ -459,7 +475,7 @@ public class Server extends Thread {
 			}
 		}
 		if (index != 0) {
-		this.clientsSorted.get(index).remove(handler);
+			this.clientsSorted.get(index).remove(handler);
 		}
 	}
 
@@ -468,5 +484,15 @@ public class Server extends Thread {
 		//gogui.startGUI();
 		gogui.setBoardSize(boardSize);
 		new Game(playersSet, boardSize, gogui);
+	}
+	
+	public int getNumberOfStones(ClientHandler handler) {
+		Board board = getBoardOfClient(handler);
+		int numOfIntersects = board.getDimension() * board.getDimension();
+		if (numOfIntersects % 2 == 0 || !handler.getColour().equals(Colour.BLACK)) {
+			return numOfIntersects / 2;
+		} else {
+			return (numOfIntersects / 2) + 1;
+		}
 	}
 }

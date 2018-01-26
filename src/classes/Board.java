@@ -16,7 +16,7 @@ public class Board {
 	// Instance variables
 	private final int dimension;
 	private Map<Integer, Intersection> intersections;
-	private List<Group> groups;
+	private Set<Group> groups;
 	private Colour lastMove;
 	private Map<Colour, Integer> score;
 	private List<Map<Integer, Colour>> boardSituations; 
@@ -29,11 +29,15 @@ public class Board {
 		this.gogui = goguiArg;
 	}
 	
+	public GoGUIIntegrator getGoGui() {
+		return gogui;
+	}
+	
 	public Board(int dimension, int numberOfPlayersArg) {
 		this.numberOfPlayers = numberOfPlayersArg;
 		this.dimension = dimension;
 		this.intersections = new HashMap<Integer, Intersection>();
-		this.groups = new ArrayList<Group>();
+		this.groups = new HashSet<Group>();
 		// Initialize all intersections
 		for (int i = 0; i < this.dimension * this.dimension; i++) {
 			this.intersections.put(i, new Intersection(i, this.dimension));
@@ -41,11 +45,13 @@ public class Board {
 
 		score = new HashMap<Colour, Integer>();
 		boardSituations = new ArrayList<Map<Integer, Colour>>();
+		
+		
 		// Black is the first one to move, so white is set as lastMove by default
 		lastMove = Colour.WHITE;
 		score.put(lastMove, 0);
 		Colour colourToCalculate = lastMove.next(this.numberOfPlayers);
-		while (!colourToCalculate.equals(lastMove)) {
+		for (int i = 0; i < numberOfPlayers; i++) {
 			score.put(colourToCalculate, 0);
 			colourToCalculate = colourToCalculate.next(this.numberOfPlayers);
 		}
@@ -110,15 +116,15 @@ public class Board {
 
 	// indicates whether this situation has already occurred
 	public boolean replicatesPreviousBoard(int index, Colour colour) {
+		
+		
 		// would this move replicate a previous board situation?
-		
-		
-		
 		Map<Integer, Colour> currentSituation = currentSituation();
 		//update with hypothetical move
 		currentSituation.replace(index, colour);
 		for (Map<Integer, Colour> previousSituation : boardSituations) {
 			if (previousSituation.equals(currentSituation)) {
+				System.out.println("Replicates a previous scenario!");
 				return true;
 			}
 		}
@@ -133,6 +139,8 @@ public class Board {
 			Colour colour = entry.getKey();
 			int sum = occupiedArea(colour) + enclosedArea(colour);
 			score.replace(colour, sum);
+			System.out.println(colour.toString() + " Enclosed: " + enclosedArea(colour)
+				+ " Occupied: " + occupiedArea(colour));
 		}
 	}
 
@@ -170,11 +178,14 @@ public class Board {
 				emptyGroups.add(group);
 			}
 		}
+		
+		System.out.println("Number of empty groups: " + emptyGroups.size());
 
 		// a group is enclosed if all neighbours have a similar colour
 		for (Group group : emptyGroups) {
 			Set<Intersection> adjacentIntersections = adjacentIntersectionsGroup(group);
-			if (setHasHomoColour(adjacentIntersections)) {
+			if (setHasHomoColour(adjacentIntersections) != null 
+					&& setHasHomoColour(adjacentIntersections).equals(colour)) {
 				sum = sum + group.getIntersections().size();
 			}
 		}
@@ -189,13 +200,16 @@ public class Board {
 	// groups are defined as orthogonally adjacent intersections with the same colour,
 	// thus this also includes empty area's
 	public void updateGroups() {
+		this.groups = new HashSet<Group>();	
 		for (int i = 0; i < intersections.size(); i++) {
 			Intersection intersectToEval = intersections.get(i);
-
+			
+			
 			// get all adjacent intersections with same colour of intersection to evaluate
 			Set<Intersection> adjacentIntersects = 
 					adjecentIntersectionsIntersectWithEqualColour(intersectToEval);
-
+			
+			
 			// are there more adjacent intersections with the same colour
 			// that do not yet belong to adjacentIntersects?
 			while (adjacentIntersectionsSetWithEqualColour(adjacentIntersects).size() > 0) {
@@ -230,7 +244,8 @@ public class Board {
 		// are there any groups without liberties?
 		// first check the intersection of the player who didn't commit the last move
 		Colour colourToCheck = lastMove.next(this.numberOfPlayers);
-		while (!colourToCheck.equals(lastMove)) {
+		
+		for (int i = 0; i < numberOfPlayers; i++) {
 			for (Group group : groups) {
 				if (group.getColour().equals(colourToCheck)) {
 					if (!hasLiberties(group)) {
@@ -325,20 +340,20 @@ public class Board {
 	}
 
 	// indicates whether the set is homogeneous. I.e. all the intersections have the same colour
-	public boolean setHasHomoColour(Set<Intersection> intersectionsArg) {
+	public Colour setHasHomoColour(Set<Intersection> intersectionsArg) {
 		int i = 0;
 		Colour colour = null;
 		for (Intersection intersect : intersectionsArg) {
 			if (i > 0) {
 				if (!intersect.getColour().equals(colour)) {
-					return false;
+					return null;
 				}
 			}
 			colour = intersect.getColour();
 			i++;
 		}
 
-		return true;
+		return colour;
 	}
 
 	// all adjacent intersection of a set of intersections
@@ -401,29 +416,30 @@ public class Board {
 
 	// all adjacent intersections of a intersection
 	public Set<Intersection> adjacentIntersectionsIntersect(Intersection intersect) {
-		int index = intersect.getIndex();
 		int dimensionLocal = intersect.getDimension();
-
+		int col = intersect.getCol();
+		int row = intersect.getRow();
+		
 		Set<Intersection> adjacentIntersections = new HashSet<Intersection>();
 
-		int index1 = index - 1;
-		if (isIntersection(index1)) {
-			adjacentIntersections.add(intersections.get(index1));
+		if (isIntersection(row + 1, col)) {
+			adjacentIntersections.add(intersections.get(
+					intersect.calculateIndex(col, row + 1, dimensionLocal)));
 		}
 
-		int index2 = index + 1;
-		if (isIntersection(index2)) {
-			adjacentIntersections.add(intersections.get(index2));
+		if (isIntersection(row - 1, col)) {
+			adjacentIntersections.add(intersections.get(
+					intersect.calculateIndex(col, row - 1, dimensionLocal)));
 		}
 
-		int index3 = index + dimensionLocal;
-		if (isIntersection(index3)) {
-			adjacentIntersections.add(intersections.get(index3));
+		if (isIntersection(row, col + 1)) {
+			adjacentIntersections.add(intersections.get(
+					intersect.calculateIndex(col + 1, row, dimensionLocal)));
 		}
 
-		int index4 = index - dimensionLocal;
-		if (isIntersection(index4)) {
-			adjacentIntersections.add(intersections.get(index4));
+		if (isIntersection(row, col - 1)) {
+			adjacentIntersections.add(intersections.get(
+					intersect.calculateIndex(col - 1, row, dimensionLocal)));
 		}
 
 		return adjacentIntersections;
@@ -434,9 +450,10 @@ public class Board {
 	public Set<Intersection> adjecentIntersectionsIntersectWithEqualColour(Intersection intersect) {
 		Colour colour = intersect.getColour();
 		Set<Intersection> intersectionsLocal = adjacentIntersectionsIntersect(intersect);
+				
 		Set<Intersection> intersectsToReturn = new HashSet<Intersection>();
 		for (Intersection intersectToCheck : intersectionsLocal) {
-			if (!intersectToCheck.getColour().equals(colour)) {
+			if (intersectToCheck.getColour().equals(colour)) {
 				intersectsToReturn.add(intersectToCheck);
 			}
 		}
