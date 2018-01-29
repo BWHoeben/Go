@@ -25,7 +25,7 @@ public class Server extends Thread {
 	private Set<HashSet<ClientHandler>> clientsInGame;
 	private Map<Integer, ClientHandler> allClients;
 	private ServerSocket ssock;
-	
+
 	// key is number of desired opponents
 	private Map<Integer, HashSet<ClientHandler>> clientsSorted; 
 	private Map<ClientHandler, Board> clientBoardCombinations;
@@ -64,13 +64,18 @@ public class Server extends Thread {
 	}
 
 	public int getPort(Scanner scanner) {
-		print("Please provide a port: ");
 		while (true) {
+			print("Please provide a port: ");
 			String input = scanner.nextLine();
 			try {
-				return Integer.parseInt(input);
+				int intToReturn = Integer.parseInt(input);
+				if (intToReturn <= 0) {
+					print("Port should be a postive number");
+				} else {
+					return Integer.parseInt(input);
+				}
 			} catch (NumberFormatException e) {
-				print("Not a valid port, please try again.");
+				print("Not a valid port."); 
 			}
 		}
 	}
@@ -163,40 +168,42 @@ public class Server extends Thread {
 	}
 
 	public void handleMessage(String msg, ClientHandler handler) {
-		print(String.format("Message recieved :%s. From %s", msg, handler.getClientName()));
-		String[] split = msg.split(Protocol.DELIMITER1);
-		if (split[0].equals(Protocol.SETTINGS)) {
-			try {
-				int boardSize = Integer.parseInt(split[2]);
-				Colour colour = Colour.getColour(split[1]);
-				handleSettings(boardSize, handler, colour);
-			} catch (NumberFormatException e) {
+		if (allClients.containsKey(handler.getNumber())) {
+			print(String.format("Message recieved :%s. From %s", msg, handler.getClientName()));
+			String[] split = msg.split("\\" + Protocol.DELIMITER1);
+			if (split[0].equals(Protocol.SETTINGS)) {
 				try {
-					throw new NotAnIntException("Not an int!");
-				} catch (NotAnIntException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
+					int boardSize = Integer.parseInt(split[2]);
+					Colour colour = Colour.getColour(split[1]);
+					handleSettings(boardSize, handler, colour);
+				} catch (NumberFormatException e) {
+					try {
+						throw new NotAnIntException("Not an int!");
+					} catch (NotAnIntException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
+				} catch (InvalidColourException e) {
+					try {
+						throw new InvalidColourException("Invalid colour!");
+					} catch (InvalidColourException e1) {
+						// TODO Auto-generated catch block
+						e1.printStackTrace();
+					}
 				}
-			} catch (InvalidColourException e) {
-				try {
-					throw new InvalidColourException("Invalid colour!");
-				} catch (InvalidColourException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
+			} else if (split[0].equals(Protocol.MOVE)) {
+				processMove(split, msg, handler);
+			} else if (split[0].equals(Protocol.QUIT)) {
+				handleQuit(handler);
+			} else if (split[0].equals(Protocol.TIMEOUT)) {
+				endGame(handler, Protocol.TIMEOUT);
+			} else if (split[0].equals(Protocol.REQUESTGAME)) {
+				handleRequest(split, handler);
+			} else {
+				print("Recieved unknown command");
+				handler.sendMessageToClient(Protocol.ERROR + Protocol.DELIMITER1 
+						+ Protocol.UNKNOWN + Protocol.DELIMITER1 + Protocol.COMMAND_END);
 			}
-		} else if (split[0].equals(Protocol.MOVE)) {
-			processMove(split, msg, handler);
-		} else if (split[0].equals(Protocol.QUIT)) {
-			handleQuit(handler);
-		} else if (split[0].equals(Protocol.TIMEOUT)) {
-			endGame(handler, Protocol.TIMEOUT);
-		} else if (split[0].equals(Protocol.REQUESTGAME)) {
-			handleRequest(split, handler);
-		} else {
-			print("Recieved unknown command");
-			handler.sendMessageToClient(Protocol.ERROR + Protocol.DELIMITER1 
-					+ Protocol.UNKNOWN + Protocol.DELIMITER1 + Protocol.ENDGAME);
 		}
 	}
 
@@ -253,15 +260,15 @@ public class Server extends Thread {
 			for (int i = 0; i < clientsInMyGame.size(); i++) {
 				ClientHandler clientWithMaxScore = getClientWithHighestScore(clientScores);
 				stringToSend = stringToSend + clientWithMaxScore.getClientName() 
-					+ Protocol.DELIMITER1 + clientScores.get(clientWithMaxScore)
-					+ Protocol.DELIMITER1;
+				+ Protocol.DELIMITER1 + clientScores.get(clientWithMaxScore)
+				+ Protocol.DELIMITER1;
 				clientScores.remove(clientWithMaxScore);
 
 			}
 			broadcastToSetOfClients(stringToSend + Protocol.COMMAND_END, clientsInMyGame);
 
 			cleanUpGame(handler);
-		
+
 		} catch (NullPointerException e) {
 			print(String.format("Game ended but was not yet initialized. "
 					+ "Reason for end: %s", reason));
@@ -272,18 +279,22 @@ public class Server extends Thread {
 						+ Protocol.TIMEOUT + Protocol.DELIMITER1;
 				for (ClientHandler handlerToAdd : clientsInMyGame) {
 					timeOutString = timeOutString + handlerToAdd.getClientName() 
-						+ Protocol.DELIMITER1 + 0 + Protocol.DELIMITER1;
+					+ Protocol.DELIMITER1 + 0 + Protocol.DELIMITER1;
 				}
 				timeOutString = 	timeOutString + Protocol.COMMAND_END;	
 				broadcastToSetOfClients(timeOutString, clientsInMyGame);
-				for (ClientHandler handlerToShutDown : clientsInMyGame) {
-					handlerToShutDown.shutdown();
-				}
+
+				// Disconnecting client that caused time-out
+				handler.shutdown();
+
+				//for (ClientHandler handlerToShutDown : clientsInMyGame) {
+				//	handlerToShutDown.shutdown();
+				//}
 			}
 			cleanUpGame(handler);
 		}
 	}
-	
+
 	public void cleanUpGame(ClientHandler handler) {
 		Set<ClientHandler> clientsInMyGame = getClientsInMyGame(handler);
 		Set<ClientHandler> setToRemove = new HashSet<ClientHandler>();
@@ -293,10 +304,11 @@ public class Server extends Thread {
 				break;
 			}
 		}
-		
+
 		clientsInGame.remove(setToRemove);
-		
+
 		for (ClientHandler handlerToClean : clientsInMyGame) {
+			handlerToClean.cancelTimers();
 			handlerToClean.resetMoves();
 			clientBoardCombinations.remove(handlerToClean);
 		}
@@ -450,12 +462,12 @@ public class Server extends Thread {
 			lastColour = nextColour;
 		}
 		lastColour = Colour.BLACK;
-		
+
 		String stringToSend = Protocol.START + Protocol.DELIMITER1 
 				+ clientsInMyGame.size() + Protocol.DELIMITER1 
 				+ Protocol.DELIMITER2 + Protocol.DELIMITER1
 				+ boardSize + Protocol.DELIMITER1;
-		
+
 		for (int i = 0; i < clientsInMyGame.size(); i++) {
 			ClientHandler clientToAdd = clientColourCombinations.get(lastColour);
 			stringToSend = stringToSend + clientToAdd.getClientName() + Protocol.DELIMITER1;
@@ -472,9 +484,9 @@ public class Server extends Thread {
 		//GoGUIIntegrator gogui = new GoGUIIntegrator(false, false, boardSize);
 		//gogui.startGUI();
 		//gogui.setBoardSize(boardSize);
-		
+
 		Board board = new Board(boardSize, clientsInMyGame.size()); //, gogui);
-		
+
 		for (ClientHandler clientInGame : clientsInMyGame) {
 			clientBoardCombinations.put(clientInGame, board);
 		}
@@ -484,7 +496,7 @@ public class Server extends Thread {
 				Protocol.FIRST + Protocol.DELIMITER1 + blackClient.getClientName()
 				+ Protocol.DELIMITER1 + Protocol.COMMAND_END, clientsInMyGame);
 	}
-	
+
 	public void processMoveInGui(Move move, Board board) {
 		int row = move.getRow();
 		int col = move.getCol();
@@ -515,13 +527,17 @@ public class Server extends Thread {
 	public int getNumberOfStones(ClientHandler handler) {
 		Board board = getBoardOfClient(handler);
 		int numOfIntersects = board.getDimension() * board.getDimension();
-		if (numOfIntersects % 2 == 0 || !handler.getColour().equals(Colour.BLACK)) {
-			return numOfIntersects / 2;
+		if (board.getNumberOfPlayer() == 2) {
+			if (numOfIntersects % 2 == 0 || !handler.getColour().equals(Colour.BLACK)) {
+				return numOfIntersects / 2;
+			} else {
+				return (numOfIntersects / 2) + 1;
+			}
 		} else {
-			return (numOfIntersects / 2) + 1;
+			return numOfIntersects / board.getNumberOfPlayer();
 		}
 	}
-	
+
 	// Return true if clients already exits
 	public boolean checkForSameName(String name) {
 		for (Map.Entry<Integer, ClientHandler> entry : this.allClients.entrySet()) {

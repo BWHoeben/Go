@@ -161,7 +161,7 @@ public class GOGUIImpl extends Application {
 		primaryStage.setScene(scene);
 		primaryStage.show();
 
-		ImagePattern pattern = new ImagePattern(new Image("background_1920.jpg"));
+		ImagePattern pattern = new ImagePattern(new Image("background_1920_2.jpg"));
 		scene.setFill(pattern);
 
 		initBoardLines();

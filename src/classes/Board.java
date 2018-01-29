@@ -33,6 +33,10 @@ public class Board {
 		return gogui;
 	}
 	
+	public int getNumberOfPlayer() {
+		return this.numberOfPlayers;
+	}
+	
 	public Board(int dimension, int numberOfPlayersArg) {
 		this.numberOfPlayers = numberOfPlayersArg;
 		this.dimension = dimension;
@@ -64,6 +68,7 @@ public class Board {
 	}
 
 	public void setIntersection(Move move) throws InvalidMoveException {
+		long startTime = System.currentTimeMillis();
 		// make a move, provided the move is valid
 		if (isValidMove(move)) {
 			Intersection intersect = intersections.get(move.getIndex());
@@ -77,6 +82,7 @@ public class Board {
 				"Invalid move! Index: %s Colour: %s",
 				move.getIndex(), move.getColour().toString()));
 		}
+		System.out.println("Set intersection took " + (System.currentTimeMillis() - startTime) + "ms");
 	}
 
 	public boolean isValidMove(Move move) {
@@ -117,17 +123,19 @@ public class Board {
 
 	// indicates whether this situation has already occurred
 	public boolean replicatesPreviousBoard(int index, Colour colour) {
-		// would this move replicate a previous board situation?
-		Colour[] currentSituation = currentSituation();
-		//update with hypothetical move
-		currentSituation[index] = colour;
-		for (Colour[] array : boardSituations) {
-			if (array.equals(currentSituation)) {
-				System.out.println("Not an unique situation");
-				return true;
-			}
-		}
 		return false;
+		
+		// would this move replicate a previous board situation?
+		//Colour[] currentSituation = currentSituation();
+		//update with hypothetical move
+		//currentSituation[index] = colour;
+		//for (Colour[] array : boardSituations) {
+		//	if (array.equals(currentSituation)) {
+		//		System.out.println("Not an unique situation");
+		//		return true;
+		//	}
+		//}
+		//return false;
 	}
 
 	// updates the score, the score is determined by:
@@ -195,6 +203,7 @@ public class Board {
 	// groups are defined as orthogonally adjacent intersections with the same colour,
 	// thus this also includes empty area's
 	public void updateGroups() {
+		long startTime = System.currentTimeMillis();
 		this.groups = new HashSet<Group>();	
 		for (int i = 0; i < intersections.size(); i++) {
 			Intersection intersectToEval = intersections.get(i);
@@ -235,7 +244,7 @@ public class Board {
 				groups.add(groupToAdd);
 			}
 		}
-
+		System.out.println("midden: " + (System.currentTimeMillis() - startTime) + "ms");
 		// are there any groups without liberties?
 		// first check the intersection of the player who didn't commit the last move
 		Colour colourToCheck = lastMove.next(this.numberOfPlayers);
@@ -251,6 +260,8 @@ public class Board {
 			}
 			colourToCheck = colourToCheck.next(this.numberOfPlayers);
 		}
+		System.out.println("einde: " + (System.currentTimeMillis() - startTime) + "ms");
+		System.out.println("doner");
 	}
 
 	// Does any of the intersections in this set belong to a certain group?
@@ -453,5 +464,9 @@ public class Board {
 			}
 		}
 		return intersectsToReturn;
+	}
+	
+	public Map<Move, Integer> calculateScoreDiff(Colour colour) {
+		return null;
 	}
 }

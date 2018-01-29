@@ -236,7 +236,7 @@ public class Client extends Thread {
 		}
 	}
 	public void handleMessage(String msg) throws InvalidCommandException, NotAnIntException {
-		String[] splitString = trimEndCommand(msg.split(Protocol.DELIMITER1), msg);
+		String[] splitString = trimEndCommand(msg.split("\\" + Protocol.DELIMITER1), msg);
 
 		if (splitString[0].equals(Protocol.START)) {
 			handleMessageStart(splitString, msg);
@@ -262,9 +262,8 @@ public class Client extends Thread {
 			shutdown();
 		}
 	}
-
+	
 	public void handleMessageStart(String[] split, String msg) {
-
 		// Case START <number of players>
 		// This client was the first to connect and may decide on the game settings
 		if (split.length == 2) {
@@ -276,7 +275,6 @@ public class Client extends Thread {
 					throw new InvalidCommandException(
 							"Invalid command! Second argument must be a number.");
 				} catch (InvalidCommandException e1) {
-					// TODO Auto-generated catch block
 					e1.printStackTrace();
 				}
 			}
@@ -347,83 +345,6 @@ public class Client extends Thread {
 				colourToAdd = colourToAdd.next(numberOfPlayers);
 			}
 		}
-	}
-
-	public void setupGame(String[] stringArray) 
-			throws NotAnIntException, NotYetImplementedException {
-
-		print("YOOOLOOOOOO");
-
-		if (stringArray.length <= 5) {
-			try {
-				throw new InvalidCommandException("The server provided not enough arguments");
-			} catch (InvalidCommandException e) {
-				e.printStackTrace();
-			}
-		}
-
-		try {
-			if (this.numberOfPlayers != Integer.parseInt(stringArray[1])) {
-				throw new InvalidCommandException(
-						"The number of players defined by the server does not match");
-			}
-		} catch (NumberFormatException e) {
-			throw new NotAnIntException(
-					"A number as a second argument was expected but not provided");
-		} catch (InvalidCommandException e) {
-			e.printStackTrace();
-		}	
-		try {
-			if (!Colour.getColour(stringArray[2]).equals(this.clientPlayer.getColour())) {
-				throw new InvalidColourException(
-						"Colour provided by server was not equal to client's colour");
-			}
-		} catch (InvalidColourException e) {
-			e.printStackTrace();
-		}
-		try {
-			if (this.boardSize != Integer.parseInt(stringArray[3])) {
-				throw new InvalidCommandException(
-						"The boardsize defined buy the server does not match");
-			}
-		} catch (NumberFormatException e) {
-			throw new NotAnIntException(
-					"A number as a third argument was expected but not provided");
-		} catch (InvalidCommandException e) {
-			e.printStackTrace();
-		}
-		String[] namesOfPlayers = Arrays.copyOfRange(stringArray, 4, stringArray.length - 1);
-		if (!namePresent(namesOfPlayers, this.name)) {
-			try {
-				throw new InvalidCommandException("The names provided by the server do not match");
-			} catch (InvalidCommandException e) {
-				e.printStackTrace();
-			}
-		}
-
-		if (numberOfPlayers == 2) {
-			String opponentName = null;
-			Colour opponentColour = null;
-			if (namesOfPlayers[0].equals(name)) {
-				opponentName = namesOfPlayers[1];
-			} else {
-				opponentName = namesOfPlayers[0];
-			}
-			if (this.clientPlayer.getColour().equals(Colour.BLACK)) {
-				opponentColour = Colour.WHITE;
-			} else {
-				opponentColour = Colour.BLACK;
-			}
-			players.add(new OpponentPlayer(opponentName, opponentColour)); 
-		} else {
-			//// remove name of clientPlayer from list of players to implement
-			//for (int i = 0; i < namesOfPlayers.length; i++) {
-			//	if (!namesOfPlayers[i].equals(name)) {
-			//		players.add(new OpponentPlayer(namesOfPlayers[i], ));
-			//	}
-			//}
-			throw new NotYetImplementedException("MULTIPLE PLAYERS IS NOT YET IMPLEMENTED!");
-		}	
 	}
 
 	public void handleMessageTurn(String[] split, String msg) {
@@ -733,7 +654,7 @@ public class Client extends Thread {
 	}
 
 	public void send(String msg) {
-		checkEndCommand(msg.split(Protocol.DELIMITER1), msg);
+		checkEndCommand(msg.split("\\" + Protocol.DELIMITER1), msg);
 		try {
 			out.write(msg);
 			out.newLine();
@@ -768,7 +689,9 @@ public class Client extends Thread {
 		this.players = new HashSet<Player>();
 		this.board = null;
 		this.clientColour = null;
-		this.gogui.clearBoard();
+		if (this.gogui != null) {
+			this.gogui.clearBoard();
+		}
 	}
 
 	public void printArray(String[] array) {

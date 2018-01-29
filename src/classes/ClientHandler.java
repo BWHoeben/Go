@@ -19,7 +19,6 @@ public class ClientHandler extends Thread {
 	private String clientName;
 	private int number;
 	private Colour colour;
-	private int timeOutSeconds = 5000;
 	private HashSet<Timer> timers = new HashSet<Timer>();
 	private boolean run = true;
 	private boolean lastMoveWasPass = false;
@@ -66,7 +65,7 @@ public class ClientHandler extends Thread {
 	 */
 	public void announce() throws IOException {
 		String msg = in.readLine();
-		String[] split = msg.split(Protocol.DELIMITER1);
+		String[] split = msg.split("\\" + Protocol.DELIMITER1);
 		if (split[0].equals(Protocol.NAME)) {
 			this.clientName = split[1];
 			if (server.checkForSameName(this.clientName)) {
@@ -133,7 +132,7 @@ public class ClientHandler extends Thread {
 	 * and shutdown() is called.
 	 */
 	public void sendMessageToClient(String msg) {
-		String[] array = msg.split(Protocol.DELIMITER1);
+		String[] array = msg.split("\\" + Protocol.DELIMITER1);
 		if (array.length > 1 && 
 				(array[0].equals(Protocol.START) || array[0].equals(Protocol.ENDGAME) ||
 						(array[0].equals(Protocol.TURN) && array[1].equals(clientName)))) {
@@ -150,7 +149,7 @@ public class ClientHandler extends Thread {
 					shutdown();
 				}
 			}, 
-					timeOutSeconds * 1000 
+					Protocol.TIMEOUTSECONDS * 1000 
 			);
 
 		}
