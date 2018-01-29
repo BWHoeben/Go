@@ -177,12 +177,20 @@ public class GOGUIImpl extends Application {
 
 		// Draw horizontal lines
 		for (int i = 1; i <= height; i++) {
-			boardLines.add(new Line(squareSize, i * squareSize, width * squareSize, i * squareSize));
+
+			Line line =
+					new Line(squareSize, i * squareSize, width * squareSize, i * squareSize);
+			line.setStroke(Color.DARKSLATEGREY);
+			boardLines.add(line);
 		}
 
 		// Draw vertical lines
 		for (int i = 1; i <= width; i++) {
-			boardLines.add(new Line(i * squareSize, squareSize, i * squareSize, height * squareSize));
+
+			Line line =
+					new Line(i * squareSize, squareSize, i * squareSize, height * squareSize);
+			line.setStroke(Color.DARKSLATEGREY);
+			boardLines.add(line);
 		}
 
 		root.getChildren().addAll(boardLines);
@@ -354,7 +362,7 @@ public class GOGUIImpl extends Application {
 			e.printStackTrace();
 		}
 	}
-	
+
 	public void quit() {
 		System.exit(0);
 	}

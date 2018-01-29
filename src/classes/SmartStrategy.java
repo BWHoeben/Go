@@ -1,7 +1,10 @@
 package classes;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
+import java.util.Set;
 
 public class SmartStrategy implements Strategy {
 
@@ -13,8 +16,20 @@ public class SmartStrategy implements Strategy {
 			RandomStrategy random = new RandomStrategy();
 			return random.determineMoveUsingStrategy(board, colour);
 		}
-		
-		Map<Move, Integer> scorediff = board.calculateScoreDiff(colour);
+
+		// get all the moves that yield the best leap in scores
+		Map<Integer, Set<Move>> scorediff = board.calculateScoreDiffs(colour);
+		Set<Move> bestMoves = scorediff.get(Collections.max(scorediff.keySet()));
+		int size = bestMoves.size(); 
+		int item = new Random().nextInt(size); 
+		int i = 0;
+		for (Move obj : bestMoves) {
+			if (i == item) {
+				return obj;
+			}
+			i++;
+		}
+
 		return null;
 	}
 

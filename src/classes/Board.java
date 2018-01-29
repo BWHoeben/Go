@@ -22,21 +22,21 @@ public class Board {
 	private List<Colour[]> boardSituations; 
 	private int numberOfPlayers;
 	private GoGUIIntegrator gogui;
-	
+
 	// Constructor
 	public Board(int dimension, int numberOfPlayersArg, GoGUIIntegrator goguiArg) {
 		this(dimension, numberOfPlayersArg);
 		this.gogui = goguiArg;
 	}
-	
+
 	public GoGUIIntegrator getGoGui() {
 		return gogui;
 	}
-	
+
 	public int getNumberOfPlayer() {
 		return this.numberOfPlayers;
 	}
-	
+
 	public Board(int dimension, int numberOfPlayersArg) {
 		this.numberOfPlayers = numberOfPlayersArg;
 		this.dimension = dimension;
@@ -49,8 +49,8 @@ public class Board {
 
 		score = new HashMap<Colour, Integer>();
 		boardSituations = new ArrayList<Colour[]>();
-		
-		
+
+
 		// Black is the first one to move, so white is set as lastMove by default
 		lastMove = Colour.WHITE;
 		score.put(lastMove, 0);
@@ -61,14 +61,13 @@ public class Board {
 		}
 		updateGroups();
 	}
-	
+
 
 	public int getDimension() {
 		return dimension;
 	}
 
-	public void setIntersection(Move move) throws InvalidMoveException {
-		long startTime = System.currentTimeMillis();
+	public void setIntersection(Move move, Boolean hypotheticalMove) throws InvalidMoveException {
 		// make a move, provided the move is valid
 		if (isValidMove(move)) {
 			Intersection intersect = intersections.get(move.getIndex());
@@ -76,13 +75,14 @@ public class Board {
 			this.lastMove = move.getColour();		
 			updateGroups();
 			updateScore();
-			copyBoard();
+			if (!hypotheticalMove) {
+				copyBoard();
+			}
 		} else {
 			throw new InvalidMoveException(String.format(
-				"Invalid move! Index: %s Colour: %s",
-				move.getIndex(), move.getColour().toString()));
+					"Invalid move! Index: %s Colour: %s",
+					move.getIndex(), move.getColour().toString()));
 		}
-		System.out.println("Set intersection took " + (System.currentTimeMillis() - startTime) + "ms");
 	}
 
 	public boolean isValidMove(Move move) {
@@ -92,7 +92,7 @@ public class Board {
 		// - the coordinates are valid
 		// - the intersection is empty
 		// - it does not replicate a previous situation
-		
+
 		if (isIntersection(index) && intersections.get(index).getColour().equals(Colour.EMPTY) 
 				&& !replicatesPreviousBoard(index, colour)) {
 			return true;
@@ -123,19 +123,17 @@ public class Board {
 
 	// indicates whether this situation has already occurred
 	public boolean replicatesPreviousBoard(int index, Colour colour) {
-		return false;
-		
 		// would this move replicate a previous board situation?
-		//Colour[] currentSituation = currentSituation();
+		Colour[] currentSituation = currentSituation();
 		//update with hypothetical move
-		//currentSituation[index] = colour;
-		//for (Colour[] array : boardSituations) {
-		//	if (array.equals(currentSituation)) {
-		//		System.out.println("Not an unique situation");
-		//		return true;
-		//	}
-		//}
-		//return false;
+		currentSituation[index] = colour;
+		for (Colour[] array : boardSituations) {
+			if (array.equals(currentSituation)) {
+				System.out.println("Not an unique situation");
+				return true;
+			}
+		}
+		return false;
 	}
 
 	// updates the score, the score is determined by:
@@ -183,7 +181,7 @@ public class Board {
 				emptyGroups.add(group);
 			}
 		}
-		
+
 		// a group is enclosed if all neighbours have a similar colour
 		for (Group group : emptyGroups) {
 			Set<Intersection> adjacentIntersections = adjacentIntersectionsGroup(group);
@@ -199,56 +197,70 @@ public class Board {
 		return score;
 	}
 
+	public void resetIntersections() {
+		for (int i = 0; i < intersections.size(); i++) {
+			Intersection intersect = intersections.get(i);
+			intersect.removedFromGroup();
+		}
+	}
+
 	// update all the groups
 	// groups are defined as orthogonally adjacent intersections with the same colour,
 	// thus this also includes empty area's
 	public void updateGroups() {
-		long startTime = System.currentTimeMillis();
+		resetIntersections();
 		this.groups = new HashSet<Group>();	
-		for (int i = 0; i < intersections.size(); i++) {
+		for (int i = 0; i < this.intersections.size(); i++) {
 			Intersection intersectToEval = intersections.get(i);
-			
-			
-			// get all adjacent intersections with same colour of intersection to evaluate
-			Set<Intersection> adjacentIntersects = 
-					adjecentIntersectionsIntersectWithEqualColour(intersectToEval);
-			
-			
-			// are there more adjacent intersections with the same colour
-			// that do not yet belong to adjacentIntersects?
-			while (adjacentIntersectionsSetWithEqualColour(adjacentIntersects).size() > 0) {
-				// add these intersections to the set adjacentIntersects
-				adjacentIntersects.addAll(
-						adjacentIntersectionsSetWithEqualColour(adjacentIntersects));
-			}
-			// do any of these intersections belong to a group?
-			Group group = getGroupOfSetOfIntersections(adjacentIntersects);
-			if (group != null) {
-				// add the current intersection to this group
-				group.addIntersection(intersectToEval);	
-				// add all adjacent intersections of this group with the same colour to this group
-				group.addSetOfIntersections(adjacentIntersectionsGroupWithEqualColour(group));
+			if (!intersectToEval.isInGroup()) {
 
-				// does this group have any adjacent intersections with 
-				// the same colour that do net yet belong to this group?
-				while (adjacentIntersectionsGroupWithEqualColour(group).size() > 0) {
-					// add these intersections to the current group
-					group.addSetOfIntersections(adjacentIntersectionsGroupWithEqualColour(group));
+				// get all adjacent intersections with same colour of intersection to evaluate
+				Set<Intersection> adjacentIntersects = 
+						adjecentIntersectionsIntersectWithEqualColour(intersectToEval);
+
+
+				// are there more adjacent intersections with the same colour
+				// that do not yet belong to adjacentIntersects?
+				while (adjacentIntersectionsSetWithEqualColour(adjacentIntersects).size() > 0) {
+					// add these intersections to the set adjacentIntersects
+					adjacentIntersects.addAll(
+							adjacentIntersectionsSetWithEqualColour(adjacentIntersects));
 				}
-			} else {
-				// create a new group for the current intersection
-				Map<Integer, Intersection> map = new HashMap<Integer, Intersection>();
-				map.put(intersectToEval.getIndex(), intersectToEval);
-				Group groupToAdd = new Group(map, intersectToEval.getColour());
-				groupToAdd.addSetOfIntersections(adjacentIntersects);
-				groups.add(groupToAdd);
+				// do any of these intersections belong to a group?
+				Group group = getGroupOfSetOfIntersections(adjacentIntersects);
+				if (group != null) {
+					// add the current intersection to this group
+					group.addIntersection(intersectToEval);	
+					// add all adjacent intersections of this group with the same colour to this group
+					group.addSetOfIntersections(adjacentIntersectionsGroupWithEqualColour(group));
+
+					// does this group have any adjacent intersections with 
+					// the same colour that do net yet belong to this group?
+					while (adjacentIntersectionsGroupWithEqualColour(group).size() > 0) {
+						// add these intersections to the current group
+						group.addSetOfIntersections(adjacentIntersectionsGroupWithEqualColour(group));
+					}
+				} else {
+					// create a new group for the current intersection
+					Map<Integer, Intersection> map = new HashMap<Integer, Intersection>();
+					map.put(intersectToEval.getIndex(), intersectToEval);
+					Group groupToAdd = new Group(map, intersectToEval.getColour());
+					groupToAdd.addSetOfIntersections(adjacentIntersects);
+					groups.add(groupToAdd);
+					intersectToEval.addedToGroup();
+				}
+				// after this all intersections in adjacentIntersects should belong to a group
+				for (Intersection intersect : adjacentIntersects) {
+					intersect.addedToGroup();
+				}
 			}
 		}
-		System.out.println("midden: " + (System.currentTimeMillis() - startTime) + "ms");
+
+		resetIntersections();
 		// are there any groups without liberties?
 		// first check the intersection of the player who didn't commit the last move
 		Colour colourToCheck = lastMove.next(this.numberOfPlayers);
-		
+
 		for (int i = 0; i < numberOfPlayers; i++) {
 			for (Group group : groups) {
 				if (group.getColour().equals(colourToCheck)) {
@@ -260,8 +272,6 @@ public class Board {
 			}
 			colourToCheck = colourToCheck.next(this.numberOfPlayers);
 		}
-		System.out.println("einde: " + (System.currentTimeMillis() - startTime) + "ms");
-		System.out.println("doner");
 	}
 
 	// Does any of the intersections in this set belong to a certain group?
@@ -388,10 +398,10 @@ public class Board {
 		for (Entry<Integer, Intersection> entry : group.getIntersections().entrySet()) {
 			Intersection intersect = entry.getValue();
 			Set<Intersection>  adjacentIntersectionsIntersection
-				= adjacentIntersectionsIntersect(intersect);
+			= adjacentIntersectionsIntersect(intersect);
 			adjacentIntersectionsGroup.addAll(adjacentIntersectionsIntersection);
 		}
-		
+
 		Set<Intersection> intersectionsToRemove = new HashSet<Intersection>();
 
 		// remove intersections that are already in the group
@@ -400,7 +410,7 @@ public class Board {
 				intersectionsToRemove.add(intersect);
 			}
 		}
-		
+
 		adjacentIntersectionsGroup.removeAll(intersectionsToRemove);
 
 		return adjacentIntersectionsGroup;
@@ -425,7 +435,7 @@ public class Board {
 		int dimensionLocal = intersect.getDimension();
 		int col = intersect.getCol();
 		int row = intersect.getRow();
-		
+
 		Set<Intersection> adjacentIntersections = new HashSet<Intersection>();
 
 		if (isIntersection(row + 1, col)) {
@@ -456,7 +466,7 @@ public class Board {
 	public Set<Intersection> adjecentIntersectionsIntersectWithEqualColour(Intersection intersect) {
 		Colour colour = intersect.getColour();
 		Set<Intersection> intersectionsLocal = adjacentIntersectionsIntersect(intersect);
-				
+
 		Set<Intersection> intersectsToReturn = new HashSet<Intersection>();
 		for (Intersection intersectToCheck : intersectionsLocal) {
 			if (intersectToCheck.getColour().equals(colour)) {
@@ -465,8 +475,54 @@ public class Board {
 		}
 		return intersectsToReturn;
 	}
-	
-	public Map<Move, Integer> calculateScoreDiff(Colour colour) {
-		return null;
+
+	public Map<Integer, Set<Move>> calculateScoreDiffs(Colour colour) {
+		Map<Integer, Set<Move>> mapToReturn = new HashMap<Integer, Set<Move>>();
+
+		// get all valid moves
+		Set<Integer> validMoves = this.getValidMoves(colour);
+		int currentDiff = scoreDiff(colour);
+		for (Integer move : validMoves) {
+			Move moveToMake = new Move(move, this.dimension, colour);
+			// make hypotical move
+			try {
+				setIntersection(moveToMake, true);
+			} catch (InvalidMoveException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			// calculate hypothetical score
+			int newScoreDiff = scoreDiff(colour);
+			if (mapToReturn.containsKey(newScoreDiff)) {
+				Set<Move> setToUpdate = mapToReturn.get(newScoreDiff);
+				setToUpdate.add(moveToMake);
+				mapToReturn.put(move, setToUpdate);
+			} else {
+				Set<Move> setToAdd = new HashSet<Move>();
+				setToAdd.add(moveToMake);
+				mapToReturn.put(move, setToAdd);
+			}
+
+			// revert hypothetical move
+			moveToMake = new Move(move, this.dimension, Colour.EMPTY);
+			try {
+				setIntersection(moveToMake, true);
+			} catch (InvalidMoveException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+		return mapToReturn;
+	}
+
+	public int scoreDiff(Colour colour) {
+		int myCurrentScore = score.get(colour);
+		int myOpponentsScore = 0;
+		for (int i = 0; i < numberOfPlayers; i++) {
+			Colour colourToEvaluate = colour.next(numberOfPlayers);
+			myOpponentsScore = myOpponentsScore + score.get(colourToEvaluate);
+		}
+		return myCurrentScore - myOpponentsScore;
+
 	}
 }

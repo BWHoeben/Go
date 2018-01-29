@@ -367,7 +367,7 @@ public class Server extends Thread {
 
 	public boolean processMoveLocally(Move move, Board board, ClientHandler handler) {
 		try {
-			board.setIntersection(move);
+			board.setIntersection(move, false);
 			//processMoveInGui(move, board);
 		} catch (InvalidMoveException e) {
 			print("That's not a valid move!");

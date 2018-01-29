@@ -392,7 +392,7 @@ public class Client extends Thread {
 				Move move;
 				try {
 					move = new Move(split[2], boardSize, playerWhoJustHadATurn.getColour());
-					board.setIntersection(move);
+					board.setIntersection(move, false);
 					processMoveInGui(move);
 				} catch (InvalidCoordinateException e) {
 					print("That's not a valid coordinate");
@@ -415,7 +415,7 @@ public class Client extends Thread {
 					} else {
 						move = moveToMake.toString();
 						try {
-							board.setIntersection(moveToMake);
+							board.setIntersection(moveToMake, false);
 						} catch (InvalidMoveException e) {
 							// TODO Auto-generated catch block
 							e.printStackTrace();

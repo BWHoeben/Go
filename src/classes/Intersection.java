@@ -5,12 +5,25 @@ public class Intersection {
 	private int index;
 	private int dimensionOfBoard;
 	private Colour colour;
+	private boolean isInGroup = false;
 
 
 	public Intersection(int index, int dimensionOfBoard) {
 		this.index = index;
 		this.dimensionOfBoard = dimensionOfBoard;
 		this.colour = Colour.EMPTY;
+	}
+	
+	public void addedToGroup() {
+		this.isInGroup = true;
+	}
+	
+	public void removedFromGroup() {
+		this.isInGroup = false;
+	}
+	
+	public boolean isInGroup() {
+		return this.isInGroup;
 	}
 
 	public int getRow() {
