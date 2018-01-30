@@ -1,8 +1,5 @@
 package classes;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 
@@ -10,18 +7,21 @@ public class SmartStrategy implements Strategy {
 
 	@Override
 	public Move determineMoveUsingStrategy(ActualBoard board, Colour colour) {
+		long StartTime = System.currentTimeMillis();
+
 		// get all the moves that yield the best leap in scores
-		Set<Move> scorediff = board.calculateScoreDiffs(colour);
+		MoveScoreCombination msc = board.calculateScoreDiffs(colour);
+		Set<Move> moves = msc.getMoves();
+		if (moves.size() == 1) {
+			return moves.toArray(new Move[1])[0];
+		}
 		
-		if (scorediff.size() == 1) {
-			return scorediff.toArray(new Move[1])[0];
-		} 
-		
-		int size = scorediff.size(); 
+		int size = moves.size(); 
 		int item = new Random().nextInt(size); 
 		int i = 0;
-		for (Move obj : scorediff) {
+		for (Move obj : moves) {
 			if (i == item) {
+				System.out.println("Determining move took: " + (System.currentTimeMillis() - StartTime));
 				return obj;
 			}
 			i++;
@@ -29,4 +29,5 @@ public class SmartStrategy implements Strategy {
 
 		return null;
 	}
+
 }

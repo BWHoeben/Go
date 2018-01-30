@@ -150,7 +150,7 @@ public class Client extends Thread {
 
 		print(String.format("Welcome %s!", name));
 
-		int port = 5000;
+		int port = Protocol.DEFAULT_PORT;
 		InetAddress host = null;
 
 		host = InetAddress.getLocalHost();
@@ -200,12 +200,20 @@ public class Client extends Thread {
 		}
 
 		this.players = new HashSet<Player>();
-
+		// CASE 
+		// NAME <name> VERSION <#> EXTENSIONS CHAT CHALLENGE LEADERBOARD SECURITY 2+ SIMULTANEOUS MULTIPLEMOVES
+		int multi;
+		if (this.opponents > 1) {
+			multi = 1;
+		} else {
+			multi = 0;
+		}
+		
 		send(Protocol.NAME + Protocol.DELIMITER1 + name + Protocol.DELIMITER1 +
 				Protocol.VERSION + Protocol.DELIMITER1 + Protocol.VERSIONNUMBER +
 				Protocol.DELIMITER1 + Protocol.EXTENSIONS + Protocol.DELIMITER1 +
 				0 + Protocol.DELIMITER1 	+ 0 + Protocol.DELIMITER1 + 0 +
-				Protocol.DELIMITER1 + 0 + Protocol.DELIMITER1 + 0 +
+				Protocol.DELIMITER1 + 0 + Protocol.DELIMITER1 + multi +
 				Protocol.DELIMITER1 + 0 + Protocol.DELIMITER1 
 				+ 0 + Protocol.DELIMITER1 + Protocol.COMMAND_END);
 		sendRequest(this.opponents);
@@ -258,11 +266,11 @@ public class Client extends Thread {
 			shutdown();
 		} else {
 			print("Recieved error message from server. Message was: " + msg);
-			print("Terminating");
+			print("Honestly, I don't really care for this server. Bye.");
 			shutdown();
 		}
 	}
-	
+
 	public void handleMessageStart(String[] split, String msg) {
 		// Case START <number of players>
 		// This client was the first to connect and may decide on the game settings
@@ -612,45 +620,49 @@ public class Client extends Thread {
 		} else {
 			print("You are going to play Go with " + (numberOfPlayersArg - 1) + " other players!"); 
 		}
-		print("Please choose a colour! available options:");
-		print(colour.first().toString());
-		for (int i = 0; i < numberOfPlayersArg - 1; i++) {
-			colour = colour.next(numberOfPlayersArg);
-			print(colour.toString());
-		}
-		colour = colour.first();
-
-		String colourString = "";
-
-		while (true) {
-			try {
-				if (SCANNER.hasNextLine()) {
-					colourString = SCANNER.nextLine(); //Should be a blocking call
-					this.clientColour = Colour.getColour(colourString.toUpperCase());
-					print(String.format("You choose %s", this.clientColour));
-					break;
-				} 
-			} catch (errors.InvalidColourException e) {
-				print("This is not a valid colour. Please try again.");
+		if (Client.isHuman) {
+			print("Please choose a colour! available options:");
+			print(colour.first().toString());
+			for (int i = 0; i < numberOfPlayersArg - 1; i++) {
+				colour = colour.next(numberOfPlayersArg);
+				print(colour.toString());
 			}
-		}
-		print("Please enter a board size: ");
-		while (true) {
-			try {
-				this.boardSize = Integer.parseInt(SCANNER.nextLine());
-				if (this.boardSize > 1 && this.boardSize < 100) {
-					break;
+			colour = colour.first();
+
+			String colourString = "";
+
+			while (true) {
+				try {
+					if (SCANNER.hasNextLine()) {
+						colourString = SCANNER.nextLine(); //Should be a blocking call
+						this.clientColour = Colour.getColour(colourString.toUpperCase());
+						print(String.format("You choose %s", this.clientColour));
+						break;
+					} 
+				} catch (errors.InvalidColourException e) {
+					print("This is not a valid colour. Please try again.");
 				}
-				print("Board size should be a integer bigger than one and"
-						+ "smaller than hundred. Please try again.");
-			} catch (NumberFormatException e) {
-				print("You did not enter a valid integer. Please try again.");
 			}
+			print("Please enter a board size: ");
+			while (true) {
+				try {
+					this.boardSize = Integer.parseInt(SCANNER.nextLine());
+					if (this.boardSize > 1 && this.boardSize < 100) {
+						break;
+					}
+					print("Board size should be a integer bigger than one and"
+							+ "smaller than hundred. Please try again.");
+				} catch (NumberFormatException e) {
+					print("You did not enter a valid integer. Please try again.");
+				}
+			}
+		} else {
+			clientColour = Colour.BLACK;
+			boardSize = 19;
 		}
 		send(Protocol.SETTINGS + Protocol.DELIMITER1 + clientColour.toString() + 
 				Protocol.DELIMITER1 + boardSize + Protocol.DELIMITER1 + Protocol.COMMAND_END);
-	}
-
+	} 
 	public void send(String msg) {
 		checkEndCommand(msg.split("\\" + Protocol.DELIMITER1), msg);
 		try {

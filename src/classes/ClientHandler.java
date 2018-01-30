@@ -23,6 +23,7 @@ public class ClientHandler extends Thread {
 	private boolean run = true;
 	private boolean lastMoveWasPass = false;
 	private int movesPerformed;
+	private boolean turn = false;
 
 	/**
 	 * Constructs a ClientHandler object
@@ -37,6 +38,18 @@ public class ClientHandler extends Thread {
 		this.movesPerformed = 0;
 	}
 
+	public boolean isTurn() {
+		return turn;
+	}
+	
+	public void tookTurn() {
+		turn = false;
+	}
+	
+	public void getsTurn() {
+		turn = true;
+	}
+	
 	public int getNumber() {
 		return number;
 	}
@@ -170,7 +183,7 @@ public class ClientHandler extends Thread {
 	 */
 	public void shutdown() {
 		if (run) {
-			server.removeHandler(this);
+			server.endGame(this, Protocol.ABORTED);
 			Server.print("[" + clientName + " disconnected]");
 			this.run = false;
 		}

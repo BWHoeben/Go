@@ -65,52 +65,5 @@ public class ActualBoard extends Board {
 		}
 	}
 
-	public Set<Move> calculateScoreDiffs(Colour colour) {		
-		int maxScore = - 10000;
-		
-		Set<Move> setToReturn = new HashSet<Move>();
-		// get all valid moves
-		Set<Integer> validMoves = this.getValidMoves(colour);
-		Set<Integer> movesToEval = new HashSet<Integer>();
-		for (Integer i : validMoves) {
-			if (i == 119) {
-				System.out.println("Hoi");
-			}
-			if (!isLonely(intersections.get(i), colour)) {
-				movesToEval.add(i);
-			}
-		}
-		if (movesToEval.size() == 0) {
-			movesToEval.addAll(validMoves);
-		}
-		
-		//int currentDiff = scoreDiff(colour);
-		for (Integer move : movesToEval) {
-			Move moveToMake = new Move(move, this.dimension, colour);
-			
-			// create new hypothetical board
-			HypotheticalBoard hypoBoard = new HypotheticalBoard(this.currentSituation(), this.dimension, this.numberOfPlayers, this.boardSituations, this.lastMove, this.score);
-
-			// make hypotical move
-			try {
-				hypoBoard.setIntersection(moveToMake);
-			} catch (InvalidMoveException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			
-			// calculate hypothetical score
-			int newScoreDiff = hypoBoard.scoreDiff(colour);
-			
-			if (newScoreDiff > maxScore) {
-				maxScore = newScoreDiff;
-				setToReturn.clear();
-				setToReturn.add(moveToMake);
-			} else if (newScoreDiff == maxScore) {
-				setToReturn.add(moveToMake);
-			}
-		}
-		
-		return setToReturn;
-	}
+	
 }

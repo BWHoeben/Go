@@ -43,8 +43,8 @@ public class Server extends Thread {
 		Scanner scanner = new Scanner(System.in);
 
 		// Ask for port
-		int port = getPort(scanner);
-
+		//int port = getPort(scanner);
+		int port = Protocol.DEFAULT_PORT;
 		// Open socket
 		openServerSocket(port, scanner);
 
@@ -249,6 +249,11 @@ public class Server extends Thread {
 		Set<ClientHandler> clientsInMyGame = getClientsInMyGame(handler);
 		try {
 			Map<Colour, Integer> scores = getBoardOfClient(handler).getScore();
+
+			if (reason.equals(Protocol.ABORTED) || reason.equals(Protocol.TIMEOUT)) {
+				scores.replace(handler.getColour(), 0);
+			}
+
 			Map<ClientHandler, Integer> clientScores = new HashMap<ClientHandler, Integer>();
 			assert clientsInMyGame.size() == scores.size();
 			int score = 0;
@@ -307,12 +312,14 @@ public class Server extends Thread {
 		}
 
 		clientsInGame.remove(setToRemove);
-
-		for (ClientHandler handlerToClean : clientsInMyGame) {
-			handlerToClean.cancelTimers();
-			handlerToClean.resetMoves();
-			clientBoardCombinations.remove(handlerToClean);
+		if (clientsInMyGame != null) {
+			for (ClientHandler handlerToClean : clientsInMyGame) {
+				handlerToClean.cancelTimers();
+				handlerToClean.resetMoves();
+				clientBoardCombinations.remove(handlerToClean);
+			}
 		}
+		removeHandler(handler);
 	}
 
 	public ClientHandler getClientWithHighestScore(Map<ClientHandler, Integer> clientScores) {
@@ -329,40 +336,43 @@ public class Server extends Thread {
 
 	// CASE MOVE row_column
 	public void processMove(String[] split, String msg, ClientHandler handler) {
-		//String playerWhoMadeMove = handler.getClientName();
-		//Set<ClientHandler> clientsInThisGame = getClientsInMyGame(handler);
-		Boolean gameOver = false;
-		ActualBoard board = getBoardOfClient(handler);
-		Move move = null;
-		if (split[1].equals(Protocol.PASS)) {
-			print(handler.getClientName() + " passed.");
-			// did this clients also pass last time?
-			if (handler.passedOnPreviousTurn()) {
-				print(handler.getClientName() + 
-						"also passed during his/her previous turn. Terminating game.");
-				handleQuit(handler);
+		if (handler.isTurn()) {
+			handler.tookTurn();
+			Boolean gameOver = false;
+			ActualBoard board = getBoardOfClient(handler);
+			Move move = null;
+			if (split[1].equals(Protocol.PASS)) {
+				print(handler.getClientName() + " passed.");
+				// did this clients also pass last time?
+				if (handler.passedOnPreviousTurn()) {
+					print(handler.getClientName() + 
+							"also passed during his/her previous turn. Terminating game.");
+					handleQuit(handler);
+				}
+				handler.pass(true);
+			} else {
+				handler.incrementNumberOfMoves();
+				handler.pass(false);
+				try {
+					move = new Move(split[1], board.getDimension(), handler.getColour());
+				} catch (InvalidCoordinateException e) {
+					e.printStackTrace();
+				}
+				gameOver = processMoveLocally(move, board, handler);
+				if (handler.movesPerformed() >= getNumberOfStones(handler)) {
+					gameOver = true;
+					print(handler.getClientName() + " ran out of stones");
+				}
 			}
-			handler.pass(true);
+			// Check for pass
+			if (!gameOver) {
+				communicateMove(move, handler);
+			} else {
+				print("Game has ended");
+				endGame(handler, Protocol.FINISHED);
+			}
 		} else {
-			handler.incrementNumberOfMoves();
-			handler.pass(false);
-			try {
-				move = new Move(split[1], board.getDimension(), handler.getColour());
-			} catch (InvalidCoordinateException e) {
-				e.printStackTrace();
-			}
-			gameOver = processMoveLocally(move, board, handler);
-			if (handler.movesPerformed() >= getNumberOfStones(handler)) {
-				gameOver = true;
-				print(handler.getClientName() + " ran out of stones");
-			}
-		}
-		// Check for pass
-		if (!gameOver) {
-			communicateMove(move, handler);
-		} else {
-			print("Game has ended");
-			endGame(handler, Protocol.FINISHED);
+			print("Recieved move from " + handler.getClientName() + " but it's not his turn!");
 		}
 	}
 
@@ -384,29 +394,31 @@ public class Server extends Thread {
 
 	public void communicateMove(Move move, ClientHandler clientWhoMadeMove) {
 		Set<ClientHandler> clientsInThisGame = getClientsInMyGame(clientWhoMadeMove);
-		int numberOfClientWhoMadeMove = clientWhoMadeMove.getNumber();
-		List<Integer> numbersOfClientsInThisGame = new ArrayList<Integer>();
+		if (clientsInThisGame != null) {
+			int numberOfClientWhoMadeMove = clientWhoMadeMove.getNumber();
+			List<Integer> numbersOfClientsInThisGame = new ArrayList<Integer>();
+			for (ClientHandler handler : clientsInThisGame) {
+				numbersOfClientsInThisGame.add(handler.getNumber());
+			}
 
-		for (ClientHandler handler : clientsInThisGame) {
-			numbersOfClientsInThisGame.add(handler.getNumber());
+			int numberOfNextClient = getNextNumberOfList(
+					numbersOfClientsInThisGame, numberOfClientWhoMadeMove);
+
+			ClientHandler nextClient = allClients.get(numberOfNextClient);
+			String moveAsString  = null;
+			if (move != null) {
+				moveAsString = move.toString();
+			} else {
+				moveAsString = Protocol.PASS;
+			}
+			nextClient.getsTurn();
+			String stringToSend = Protocol.TURN + Protocol.DELIMITER1 + 
+					clientWhoMadeMove.getClientName() +
+					Protocol.DELIMITER1 + moveAsString + Protocol.DELIMITER1 +
+					nextClient.getClientName() + Protocol.DELIMITER1 + Protocol.COMMAND_END;
+
+			broadcastToSetOfClients(stringToSend, clientsInThisGame);
 		}
-
-		int numberOfNextClient = getNextNumberOfList(
-				numbersOfClientsInThisGame, numberOfClientWhoMadeMove);
-
-		ClientHandler nextClient = allClients.get(numberOfNextClient);
-		String moveAsString  = null;
-		if (move != null) {
-			moveAsString = move.toString();
-		} else {
-			moveAsString = Protocol.PASS;
-		}
-		String stringToSend = Protocol.TURN + Protocol.DELIMITER1 + 
-				clientWhoMadeMove.getClientName() +
-				Protocol.DELIMITER1 + moveAsString + Protocol.DELIMITER1 +
-				nextClient.getClientName() + Protocol.DELIMITER1 + Protocol.COMMAND_END;
-
-		broadcastToSetOfClients(stringToSend, clientsInThisGame);
 	}
 
 	public int getNextNumberOfList(List<Integer> list, int i) {
@@ -491,7 +503,7 @@ public class Server extends Thread {
 		for (ClientHandler clientInGame : clientsInMyGame) {
 			clientBoardCombinations.put(clientInGame, board);
 		}
-
+		blackClient.getsTurn();
 		broadcastToSetOfClients(Protocol.TURN + Protocol.DELIMITER1 + 
 				blackClient.getClientName() 	+ Protocol.DELIMITER1 + 
 				Protocol.FIRST + Protocol.DELIMITER1 + blackClient.getClientName()
