@@ -264,10 +264,11 @@ public class Server extends Thread {
 
 			for (int i = 0; i < clientsInMyGame.size(); i++) {
 				ClientHandler clientWithMaxScore = getClientWithHighestScore(clientScores);
-				System.out.println(clientWithMaxScore.getColour().toString() + " Score" + clientScores.get(clientWithMaxScore));
+				System.out.println(clientWithMaxScore.getColour().toString() 
+						+ " Score" + clientScores.get(clientWithMaxScore));
 				stringToSend = stringToSend + clientWithMaxScore.getClientName() 
-				+ Protocol.DELIMITER1 + clientScores.get(clientWithMaxScore)
-				+ Protocol.DELIMITER1;
+					+ Protocol.DELIMITER1 + clientScores.get(clientWithMaxScore)
+					+ Protocol.DELIMITER1;
 				clientScores.remove(clientWithMaxScore);
 
 			}
@@ -285,7 +286,7 @@ public class Server extends Thread {
 						+ Protocol.TIMEOUT + Protocol.DELIMITER1;
 				for (ClientHandler handlerToAdd : clientsInMyGame) {
 					timeOutString = timeOutString + handlerToAdd.getClientName() 
-					+ Protocol.DELIMITER1 + 0 + Protocol.DELIMITER1;
+						+ Protocol.DELIMITER1 + 0 + Protocol.DELIMITER1;
 				}
 				timeOutString = 	timeOutString + Protocol.COMMAND_END;	
 				broadcastToSetOfClients(timeOutString, clientsInMyGame);

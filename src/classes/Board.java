@@ -202,14 +202,16 @@ public abstract class Board {
 				if (group != null) {
 					// add the current intersection to this group
 					group.addIntersection(intersectToEval);	
-					// add all adjacent intersections of this group with the same colour to this group
+					// add all adjacent intersections of 
+					// this group with the same colour to this group
 					group.addSetOfIntersections(adjacentIntersectionsGroupWithEqualColour(group));
 
 					// does this group have any adjacent intersections with 
 					// the same colour that do net yet belong to this group?
 					while (adjacentIntersectionsGroupWithEqualColour(group).size() > 0) {
 						// add these intersections to the current group
-						group.addSetOfIntersections(adjacentIntersectionsGroupWithEqualColour(group));
+						group.addSetOfIntersections(
+								adjacentIntersectionsGroupWithEqualColour(group));
 					}
 				} else {
 					// create a new group for the current intersection
@@ -366,7 +368,7 @@ public abstract class Board {
 		for (Entry<Integer, Intersection> entry : group.getIntersections().entrySet()) {
 			Intersection intersect = entry.getValue();
 			Set<Intersection>  adjacentIntersectionsIntersection
-			= adjacentIntersectionsIntersect(intersect);
+				= adjacentIntersectionsIntersect(intersect);
 			adjacentIntersectionsGroup.addAll(adjacentIntersectionsIntersection);
 		}
 
@@ -430,7 +432,8 @@ public abstract class Board {
 	}
 
 	// all adjacent intersections of a intersection
-	public Set<Intersection> adjacentIntersectionsIntersectDiag(Intersection intersect, Colour colour) {
+	public Set<Intersection> adjacentIntersectionsIntersectDiag(
+			Intersection intersect, Colour colour) {
 		int dimensionLocal = intersect.getDimension();
 		int col = intersect.getCol();
 		int row = intersect.getRow();
@@ -550,7 +553,7 @@ public abstract class Board {
 	}
 	
 	public MoveScoreCombination calculateScoreDiffs(Colour colour) {		
-		int maxScore = - 10000;
+		int maxScore = -10000;
 		
 		Set<Move> setToReturn = new HashSet<Move>();
 		// get all valid moves
@@ -571,7 +574,9 @@ public abstract class Board {
 			Move moveToMake = new Move(move, this.dimension, colour);
 			
 			// create new hypothetical board
-			HypotheticalBoard hypoBoard = new HypotheticalBoard(this.currentSituation(), this.dimension, this.numberOfPlayers, this.boardSituations, this.lastMove, this.score);
+			HypotheticalBoard hypoBoard = new HypotheticalBoard(this.currentSituation(), 
+					this.dimension, this.numberOfPlayers, 
+					this.boardSituations, this.lastMove, this.score);
 
 			// make hypothetical move
 			try {

@@ -10,7 +10,6 @@ import java.util.HashSet;
 import java.util.Timer;
 
 import errors.NotYetImplementedException;
-import errors.VersionsDoNotMatchException;
 
 public class ClientHandler extends Thread {
 	private Server server;

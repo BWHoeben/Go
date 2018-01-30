@@ -26,7 +26,6 @@ import errors.InvalidMoveException;
 import errors.NameException;
 import errors.NoValidPortException;
 import errors.NotAnIntException;
-import errors.NotYetImplementedException;
 import errors.ScoresDoNotMatchException;
 
 public class Client extends Thread {
@@ -201,7 +200,8 @@ public class Client extends Thread {
 
 		this.players = new HashSet<Player>();
 		// CASE 
-		// NAME <name> VERSION <#> EXTENSIONS CHAT CHALLENGE LEADERBOARD SECURITY 2+ SIMULTANEOUS MULTIPLEMOVES
+		// NAME <name> VERSION <#> EXTENSIONS CHAT CHALLENGE 
+		// LEADERBOARD SECURITY 2+ SIMULTANEOUS MULTIPLEMOVES
 		int multi;
 		if (this.opponents > 1) {
 			multi = 1;
@@ -607,7 +607,7 @@ public class Client extends Thread {
 			return new HumanPlayer(this.name, colour, Client.SCANNER);
 		} else {
 			//Strategy strategy = new RandomStrategy();
-			return new ComputerPlayer(this.name, colour);//, strategy);	
+			return new ComputerPlayer(this.name, colour); //, strategy);	
 		}
 	}
 
