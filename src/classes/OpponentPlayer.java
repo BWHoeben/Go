@@ -8,7 +8,7 @@ public class OpponentPlayer extends Player {
 	}
 
 	@Override
-	public Move determineMove(Board board) {
+	public Move determineMove(ActualBoard board) {
 		// TODO Auto-generated method stub
 		return null;
 	}

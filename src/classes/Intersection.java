@@ -14,6 +14,12 @@ public class Intersection {
 		this.colour = Colour.EMPTY;
 	}
 	
+	public Intersection(int index, int dimensionOfBoard, Colour colour) {
+		this.index = index;
+		this.dimensionOfBoard = dimensionOfBoard;
+		this.colour = colour;
+	}
+	
 	public void addedToGroup() {
 		this.isInGroup = true;
 	}

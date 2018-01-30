@@ -27,5 +27,5 @@ public abstract class Player {
 		return colour;
 	}
 	
-	public abstract Move determineMove(Board board);
+	public abstract Move determineMove(ActualBoard board);
 }

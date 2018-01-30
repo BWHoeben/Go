@@ -28,7 +28,7 @@ public class Server extends Thread {
 
 	// key is number of desired opponents
 	private Map<Integer, HashSet<ClientHandler>> clientsSorted; 
-	private Map<ClientHandler, Board> clientBoardCombinations;
+	private Map<ClientHandler, ActualBoard> clientBoardCombinations;
 
 	public static void main(String[] args) 
 			throws InvalidNumberOfArgumentsException, NoValidPortException {
@@ -56,7 +56,7 @@ public class Server extends Thread {
 		// that are currently in a game as well as those that are not
 		this.allClients = new HashMap<Integer, ClientHandler>();
 
-		this.clientBoardCombinations = new HashMap<ClientHandler, Board>();
+		this.clientBoardCombinations = new HashMap<ClientHandler, ActualBoard>();
 		this.clientsInGame = new HashSet<HashSet<ClientHandler>>();
 		this.clientsSorted = new HashMap<Integer, HashSet<ClientHandler>>();
 		// Done with reading input from console, so closing scanner
@@ -259,6 +259,7 @@ public class Server extends Thread {
 
 			for (int i = 0; i < clientsInMyGame.size(); i++) {
 				ClientHandler clientWithMaxScore = getClientWithHighestScore(clientScores);
+				System.out.println(clientWithMaxScore.getColour().toString() + " Score" + clientScores.get(clientWithMaxScore));
 				stringToSend = stringToSend + clientWithMaxScore.getClientName() 
 				+ Protocol.DELIMITER1 + clientScores.get(clientWithMaxScore)
 				+ Protocol.DELIMITER1;
@@ -331,7 +332,7 @@ public class Server extends Thread {
 		//String playerWhoMadeMove = handler.getClientName();
 		//Set<ClientHandler> clientsInThisGame = getClientsInMyGame(handler);
 		Boolean gameOver = false;
-		Board board = getBoardOfClient(handler);
+		ActualBoard board = getBoardOfClient(handler);
 		Move move = null;
 		if (split[1].equals(Protocol.PASS)) {
 			print(handler.getClientName() + " passed.");
@@ -365,9 +366,9 @@ public class Server extends Thread {
 		}
 	}
 
-	public boolean processMoveLocally(Move move, Board board, ClientHandler handler) {
+	public boolean processMoveLocally(Move move, ActualBoard board, ClientHandler handler) {
 		try {
-			board.setIntersection(move, false);
+			board.setIntersection(move);
 			//processMoveInGui(move, board);
 		} catch (InvalidMoveException e) {
 			print("That's not a valid move!");
@@ -377,7 +378,7 @@ public class Server extends Thread {
 		return board.gameOver();
 	}
 
-	public Board getBoardOfClient(ClientHandler handler) {
+	public ActualBoard getBoardOfClient(ClientHandler handler) {
 		return clientBoardCombinations.get(handler);
 	}
 
@@ -485,7 +486,7 @@ public class Server extends Thread {
 		//gogui.startGUI();
 		//gogui.setBoardSize(boardSize);
 
-		Board board = new Board(boardSize, clientsInMyGame.size()); //, gogui);
+		ActualBoard board = new ActualBoard(boardSize, clientsInMyGame.size()); //, gogui);
 
 		for (ClientHandler clientInGame : clientsInMyGame) {
 			clientBoardCombinations.put(clientInGame, board);
@@ -497,7 +498,7 @@ public class Server extends Thread {
 				+ Protocol.DELIMITER1 + Protocol.COMMAND_END, clientsInMyGame);
 	}
 
-	public void processMoveInGui(Move move, Board board) {
+	public void processMoveInGui(Move move, ActualBoard board) {
 		int row = move.getRow();
 		int col = move.getCol();
 		board.getGoGui().addStone(col, row, move.getColour());
@@ -525,7 +526,7 @@ public class Server extends Thread {
 	}
 
 	public int getNumberOfStones(ClientHandler handler) {
-		Board board = getBoardOfClient(handler);
+		ActualBoard board = getBoardOfClient(handler);
 		int numOfIntersects = board.getDimension() * board.getDimension();
 		if (board.getNumberOfPlayer() == 2) {
 			if (numOfIntersects % 2 == 0 || !handler.getColour().equals(Colour.BLACK)) {

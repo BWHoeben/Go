@@ -5,104 +5,34 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
+import java.util.Map.Entry;
 
-import GUI.GoGUIIntegrator;
 import errors.InvalidMoveException;
 
-public class Board {
+
+public abstract class Board {
 
 	// Instance variables
-	private final int dimension;
-	private Map<Integer, Intersection> intersections;
-	private Set<Group> groups;
-	private Colour lastMove;
-	private Map<Colour, Integer> score;
-	private List<Colour[]> boardSituations; 
-	private int numberOfPlayers;
-	private GoGUIIntegrator gogui;
-
-	// Constructor
-	public Board(int dimension, int numberOfPlayersArg, GoGUIIntegrator goguiArg) {
-		this(dimension, numberOfPlayersArg);
-		this.gogui = goguiArg;
-	}
-
-	public GoGUIIntegrator getGoGui() {
-		return gogui;
-	}
-
-	public int getNumberOfPlayer() {
-		return this.numberOfPlayers;
-	}
+	protected int dimension;
+	protected Map<Integer, Intersection> intersections;
+	protected Set<Group> groups;
+	protected Colour lastMove;
+	protected Map<Colour, Integer> score;
+	protected List<Colour[]> boardSituations; 
+	protected int numberOfPlayers;
 
 	public Board(int dimension, int numberOfPlayersArg) {
-		this.numberOfPlayers = numberOfPlayersArg;
 		this.dimension = dimension;
-		this.intersections = new HashMap<Integer, Intersection>();
-		this.groups = new HashSet<Group>();
-		// Initialize all intersections
-		for (int i = 0; i < this.dimension * this.dimension; i++) {
-			this.intersections.put(i, new Intersection(i, this.dimension));
-		}
-
-		score = new HashMap<Colour, Integer>();
-		boardSituations = new ArrayList<Colour[]>();
-
-
-		// Black is the first one to move, so white is set as lastMove by default
-		lastMove = Colour.WHITE;
-		score.put(lastMove, 0);
-		Colour colourToCalculate = lastMove.next(this.numberOfPlayers);
-		for (int i = 0; i < numberOfPlayers; i++) {
-			score.put(colourToCalculate, 0);
-			colourToCalculate = colourToCalculate.next(this.numberOfPlayers);
-		}
-		updateGroups();
+		this.numberOfPlayers = numberOfPlayersArg;
 	}
-
 
 	public int getDimension() {
 		return dimension;
 	}
 
-	public void setIntersection(Move move, Boolean hypotheticalMove) throws InvalidMoveException {
-		// make a move, provided the move is valid
-		if (isValidMove(move)) {
-			Intersection intersect = intersections.get(move.getIndex());
-			intersect.setColour(move.getColour());
-			this.lastMove = move.getColour();		
-			updateGroups();
-			updateScore();
-			if (!hypotheticalMove) {
-				copyBoard();
-			}
-		} else {
-			throw new InvalidMoveException(String.format(
-					"Invalid move! Index: %s Colour: %s",
-					move.getIndex(), move.getColour().toString()));
-		}
-	}
-
-	public boolean isValidMove(Move move) {
-		int index = move.getIndex();
-		Colour colour = move.getColour();
-		// a move is valid if:
-		// - the coordinates are valid
-		// - the intersection is empty
-		// - it does not replicate a previous situation
-
-		if (isIntersection(index) && intersections.get(index).getColour().equals(Colour.EMPTY) 
-				&& !replicatesPreviousBoard(index, colour)) {
-			return true;
-		} 
-		return false;
-	}
-
-	public void copyBoard() {
-		// back-up the current situations
-		boardSituations.add(currentSituation());
+	public int getNumberOfPlayer() {
+		return this.numberOfPlayers;
 	}
 
 	public boolean gameOver() {
@@ -111,6 +41,13 @@ public class Board {
 		}
 		return true;
 	}
+
+	public void copyBoard() {
+		// back-up the current situations
+		boardSituations.add(currentSituation());
+	}
+
+
 
 	public Colour[] currentSituation() {
 		// make a representation of the current situation
@@ -136,16 +73,22 @@ public class Board {
 		return false;
 	}
 
-	// updates the score, the score is determined by:
-	// - the occupied area
-	// - the enclosed area
-	public void updateScore() {
-		for (Entry<Colour, Integer> entry : score.entrySet()) 	{
-			Colour colour = entry.getKey();
-			int sum = occupiedArea(colour) + enclosedArea(colour);
-			score.replace(colour, sum);
+	public void setIntersection(Move move) throws InvalidMoveException {
+		// make a move, provided the move is valid
+		if (isValidMove(move)) {
+			Intersection intersect = intersections.get(move.getIndex());
+			intersect.setColour(move.getColour());	
+			updateGroups();
+			updateScore();
+			copyBoard();
+			this.lastMove = move.getColour();	
+		} else {
+			throw new InvalidMoveException(String.format(
+					"Invalid move! Index: %s Colour: %s",
+					move.getIndex(), move.getColour().toString()));
 		}
 	}
+
 
 	// returns the indexes of all valid moves
 	public Set<Integer> getValidMoves(Colour colour) {
@@ -157,6 +100,34 @@ public class Board {
 		}
 		return returnSet;
 	}
+
+
+	// updates the score, the score is determined by:
+	// - the occupied area
+	// - the enclosed area
+	public void updateScore() {
+		for (Entry<Colour, Integer> entry : score.entrySet()) 	{
+			Colour colour = entry.getKey();
+			int sum = occupiedArea(colour) + enclosedArea(colour);
+			score.replace(colour, sum);
+		}
+	}
+
+	public boolean isValidMove(Move move) {
+		int index = move.getIndex();
+		Colour colour = move.getColour();
+		// a move is valid if:
+		// - the coordinates are valid
+		// - the intersection is empty
+		// - it does not replicate a previous situation
+
+		if (isIntersection(index) && intersections.get(index).getColour().equals(Colour.EMPTY) 
+				&& !replicatesPreviousBoard(index, colour)) {
+			return true;
+		} 
+		return false;
+	}
+
 
 	// count the amount of occupied intersections
 	public int occupiedArea(Colour colour) {
@@ -327,9 +298,6 @@ public class Board {
 		Set<Intersection> set = new HashSet<Intersection>(group.getIntersections().values());
 		for (Intersection intersect : set) {
 			intersect.setColour(Colour.EMPTY);
-			if (this.gogui != null) {
-				gogui.removeStone(intersect.getCol(), intersect.getRow());
-			}
 		}
 	}
 
@@ -462,6 +430,83 @@ public class Board {
 	}
 
 	// all adjacent intersections of a intersection
+	public Set<Intersection> adjacentIntersectionsIntersectDiag(Intersection intersect, Colour colour) {
+		int dimensionLocal = intersect.getDimension();
+		int col = intersect.getCol();
+		int row = intersect.getRow();
+		int index;
+		Colour colourOfIntersect;
+
+		if (intersect.getIndex() == 119) {
+			System.out.println("Hoi");
+		}
+		
+		Set<Intersection> adjacentIntersections = new HashSet<Intersection>();
+
+		if (isIntersection(row + 1, col)) {
+			adjacentIntersections.add(intersections.get(
+					intersect.calculateIndex(col, row + 1, dimensionLocal)));
+		}
+
+		// diagonal
+		if (isIntersection(row + 1, col + 1)) {
+			index = 	intersect.calculateIndex(col + 1, row + 1, dimensionLocal);
+			colourOfIntersect = intersections.get(index).getColour();
+			if (colourOfIntersect.equals(colour)) {
+				adjacentIntersections.add(intersections.get(
+						intersect.calculateIndex(col + 1, row + 1, dimensionLocal)));
+			}
+		}
+
+		// diagonal
+		if (isIntersection(row + 1, col - 1)) {
+			index = 	intersect.calculateIndex(col - 1, row + 1, dimensionLocal);
+			colourOfIntersect = intersections.get(index).getColour();
+			if (colourOfIntersect.equals(colour)) {
+				adjacentIntersections.add(intersections.get(
+						intersect.calculateIndex(col - 1, row + 1, dimensionLocal)));
+			}
+		}
+
+		if (isIntersection(row - 1, col)) {
+			adjacentIntersections.add(intersections.get(
+					intersect.calculateIndex(col, row - 1, dimensionLocal)));
+		}
+
+		// diagonal
+		if (isIntersection(row - 1, col - 1)) {
+			index = 	intersect.calculateIndex(col - 1, row - 1, dimensionLocal);
+			colourOfIntersect = intersections.get(index).getColour();
+			if (colourOfIntersect.equals(colour)) {
+				adjacentIntersections.add(intersections.get(
+						intersect.calculateIndex(col - 1, row - 1, dimensionLocal)));
+			} 
+		}
+
+		// diagonal
+		if (isIntersection(row - 1, col + 1)) {
+			index = 	intersect.calculateIndex(col + 1, row - 1, dimensionLocal);
+			colourOfIntersect = intersections.get(index).getColour();
+			if (colourOfIntersect.equals(colour)) {
+				adjacentIntersections.add(intersections.get(
+						intersect.calculateIndex(col + 1, row - 1, dimensionLocal)));
+			} 
+		}
+
+		if (isIntersection(row, col + 1)) {
+			adjacentIntersections.add(intersections.get(
+					intersect.calculateIndex(col + 1, row, dimensionLocal)));
+		}
+
+		if (isIntersection(row, col - 1)) {
+			adjacentIntersections.add(intersections.get(
+					intersect.calculateIndex(col - 1, row, dimensionLocal)));
+		}
+
+		return adjacentIntersections;
+	}
+
+	// all adjacent intersections of a intersection
 	// with a colour similar to the provided intersection
 	public Set<Intersection> adjecentIntersectionsIntersectWithEqualColour(Intersection intersect) {
 		Colour colour = intersect.getColour();
@@ -476,45 +521,6 @@ public class Board {
 		return intersectsToReturn;
 	}
 
-	public Map<Integer, Set<Move>> calculateScoreDiffs(Colour colour) {
-		Map<Integer, Set<Move>> mapToReturn = new HashMap<Integer, Set<Move>>();
-
-		// get all valid moves
-		Set<Integer> validMoves = this.getValidMoves(colour);
-		int currentDiff = scoreDiff(colour);
-		for (Integer move : validMoves) {
-			Move moveToMake = new Move(move, this.dimension, colour);
-			// make hypotical move
-			try {
-				setIntersection(moveToMake, true);
-			} catch (InvalidMoveException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			// calculate hypothetical score
-			int newScoreDiff = scoreDiff(colour);
-			if (mapToReturn.containsKey(newScoreDiff)) {
-				Set<Move> setToUpdate = mapToReturn.get(newScoreDiff);
-				setToUpdate.add(moveToMake);
-				mapToReturn.put(move, setToUpdate);
-			} else {
-				Set<Move> setToAdd = new HashSet<Move>();
-				setToAdd.add(moveToMake);
-				mapToReturn.put(move, setToAdd);
-			}
-
-			// revert hypothetical move
-			moveToMake = new Move(move, this.dimension, Colour.EMPTY);
-			try {
-				setIntersection(moveToMake, true);
-			} catch (InvalidMoveException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}
-		return mapToReturn;
-	}
-
 	public int scoreDiff(Colour colour) {
 		int myCurrentScore = score.get(colour);
 		int myOpponentsScore = 0;
@@ -523,6 +529,16 @@ public class Board {
 			myOpponentsScore = myOpponentsScore + score.get(colourToEvaluate);
 		}
 		return myCurrentScore - myOpponentsScore;
+	}
 
+	public boolean isLonely(Intersection intersect, Colour colour) {
+		Set<Intersection> adjacentIntersects = 
+				adjacentIntersectionsIntersectDiag(intersect, colour);
+		for (Intersection intersectToEval : adjacentIntersects) {
+			if (!intersectToEval.getColour().equals(Colour.EMPTY)) {
+				return false;
+			}
+		}
+		return true;
 	}
 }

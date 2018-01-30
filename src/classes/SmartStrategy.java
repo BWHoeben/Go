@@ -9,21 +9,18 @@ import java.util.Set;
 public class SmartStrategy implements Strategy {
 
 	@Override
-	public Move determineMoveUsingStrategy(Board board, Colour colour) {
-		if (board.getNumberOfPlayer() != 2) {
-			System.out.println("Smart-strategy is only suitable for 2-player games."
-					+ " Switching to random strategy");
-			RandomStrategy random = new RandomStrategy();
-			return random.determineMoveUsingStrategy(board, colour);
-		}
-
+	public Move determineMoveUsingStrategy(ActualBoard board, Colour colour) {
 		// get all the moves that yield the best leap in scores
-		Map<Integer, Set<Move>> scorediff = board.calculateScoreDiffs(colour);
-		Set<Move> bestMoves = scorediff.get(Collections.max(scorediff.keySet()));
-		int size = bestMoves.size(); 
+		Set<Move> scorediff = board.calculateScoreDiffs(colour);
+		
+		if (scorediff.size() == 1) {
+			return scorediff.toArray(new Move[1])[0];
+		} 
+		
+		int size = scorediff.size(); 
 		int item = new Random().nextInt(size); 
 		int i = 0;
-		for (Move obj : bestMoves) {
+		for (Move obj : scorediff) {
 			if (i == item) {
 				return obj;
 			}
@@ -32,5 +29,4 @@ public class SmartStrategy implements Strategy {
 
 		return null;
 	}
-
 }

@@ -41,7 +41,7 @@ public class Client extends Thread {
 	private static boolean isHuman;
 	private boolean firstToConnect = false;
 	private int boardSize;
-	private Board board;
+	private ActualBoard board;
 	private Colour clientColour;
 	static final Scanner SCANNER = new Scanner(System.in);
 	private int opponents;
@@ -185,7 +185,7 @@ public class Client extends Thread {
 
 		//this.opponents = askForOpponents();
 
-		this.opponents = 3;
+		this.opponents = 1;
 
 		this.name = name;
 		try {
@@ -304,7 +304,7 @@ public class Client extends Thread {
 			}
 			this.gogui.setBoardSize(boardSize);
 			// create a new board
-			this.board = new Board(boardSize, numberOfPlayers, gogui);
+			this.board = new ActualBoard(boardSize, numberOfPlayers, gogui);
 		}
 	}
 
@@ -392,7 +392,7 @@ public class Client extends Thread {
 				Move move;
 				try {
 					move = new Move(split[2], boardSize, playerWhoJustHadATurn.getColour());
-					board.setIntersection(move, false);
+					board.setIntersection(move);
 					processMoveInGui(move);
 				} catch (InvalidCoordinateException e) {
 					print("That's not a valid coordinate");
@@ -415,7 +415,7 @@ public class Client extends Thread {
 					} else {
 						move = moveToMake.toString();
 						try {
-							board.setIntersection(moveToMake, false);
+							board.setIntersection(moveToMake);
 						} catch (InvalidMoveException e) {
 							// TODO Auto-generated catch block
 							e.printStackTrace();
@@ -427,9 +427,7 @@ public class Client extends Thread {
 					send(Protocol.MOVE + Protocol.DELIMITER1 + move + 
 							Protocol.DELIMITER1 + Protocol.COMMAND_END);
 				}
-			} else {
-				print("Waiting for opponent to make a move");
-			}
+			} 
 		}
 	}
 
@@ -530,7 +528,7 @@ public class Client extends Thread {
 		}
 	}
 
-	public void checkScores(Map<Player, Integer> playersToCheck, Board boardArg) {
+	public void checkScores(Map<Player, Integer> playersToCheck, ActualBoard boardArg) {
 		Map<Colour, Integer> scoresFromBoard = boardArg.getScore();
 		for (Map.Entry<Player, Integer> entry : playersToCheck.entrySet()) {
 			if (entry.getValue() != scoresFromBoard.get(entry.getKey().getColour())) {
@@ -600,8 +598,8 @@ public class Client extends Thread {
 		if (Client.isHuman) {
 			return new HumanPlayer(this.name, colour, Client.SCANNER);
 		} else {
-			Strategy strategy = new RandomStrategy();
-			return new ComputerPlayer(this.name, colour, strategy);	
+			//Strategy strategy = new RandomStrategy();
+			return new ComputerPlayer(this.name, colour);//, strategy);	
 		}
 	}
 

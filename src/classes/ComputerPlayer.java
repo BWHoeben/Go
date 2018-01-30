@@ -4,27 +4,31 @@ public class ComputerPlayer extends Player implements Strategy {
 
 	private Strategy strategy;
 	
-	public ComputerPlayer(String name, Colour colour, Strategy strategy) {
-		super(name, colour);
-		this.strategy = strategy;
-	}
+	//public ComputerPlayer(String name, Colour colour, Strategy strategy) {
+	//	super(name, colour);
+	//	this.strategy = strategy;
+	//}
 	
 	public ComputerPlayer(String name, Colour colour) {
 		super(name, colour);
-		this.strategy = new RandomStrategy();
+		if (colour.equals(Colour.WHITE)) {
+			this.strategy = new SmartStrategy();
+			
+			System.out.println("USING SMART STRATEGY");
+		} else {
+			this.strategy = new RandomStrategy();
+		}
 	}
 	
-	@Override
-	public Move determineMove(Board board) {
+	public Move determineMove(ActualBoard board) {
 		return determineMove(board, getColour());
 	}
 	
-	public Move determineMove(Board board, Colour colourArg) {
+	public Move determineMove(ActualBoard board, Colour colourArg) {
 		return strategy.determineMoveUsingStrategy(board, colourArg);
 	}
 
-	@Override
-	public Move determineMoveUsingStrategy(Board board, Colour colourArg) {
+	public Move determineMoveUsingStrategy(ActualBoard board, Colour colourArg) {
 		return strategy.determineMoveUsingStrategy(board, colourArg);
 	}
 }

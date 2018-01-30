@@ -13,8 +13,7 @@ public class HumanPlayer extends Player {
 		this.scanner = scannerArg;
 	}
 
-	@Override
-	public Move determineMove(Board board) {
+	public Move determineMove(ActualBoard board) {
 		int boardSize = board.getDimension();
 		while (true) {
 			System.out.println("Please enter row_column, PASS or QUIT: ");			
@@ -51,7 +50,7 @@ public class HumanPlayer extends Player {
 		}
 	}
 
-	public boolean isValidAnswer(String answer, Board board) {
+	public boolean isValidAnswer(String answer, ActualBoard board) {
 		// Is the format correct?
 		String[] array = answer.split(Protocol.DELIMITER2);
 		try {

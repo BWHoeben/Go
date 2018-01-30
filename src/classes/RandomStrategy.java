@@ -5,7 +5,7 @@ import java.util.Set;
 public class RandomStrategy implements Strategy {
 
 	@Override
-	public Move determineMoveUsingStrategy(Board board, Colour colour) {
+	public Move determineMoveUsingStrategy(ActualBoard board, Colour colour) {
 		Set<Integer> emptyIntersects = board.getValidMoves(colour);
 		int intersectToReturn = (int) Math.floor(Math.random() * emptyIntersects.size());
 		int i = 0;

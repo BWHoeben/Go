@@ -1,5 +1,5 @@
 package classes;
 
 public interface Strategy {
-	public Move determineMoveUsingStrategy(Board board, Colour colour);
+	public Move determineMoveUsingStrategy(ActualBoard board, Colour colour);
 }
