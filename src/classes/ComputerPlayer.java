@@ -15,7 +15,7 @@ public class ComputerPlayer extends Player implements Strategy {
 			this.strategy = new SmarterStrategy();
 			System.out.println("USING SMART STRATEGY");
 		} else {
-			this.strategy = new SmartStrategy();
+			this.strategy = new RandomStrategy();
 		}
 	}
 	

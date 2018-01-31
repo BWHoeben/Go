@@ -16,7 +16,7 @@ public class HumanPlayer extends Player {
 	public Move determineMove(ActualBoard board) {
 		int boardSize = board.getDimension();
 		while (true) {
-			System.out.println("Please enter row_column, PASS or QUIT: ");			
+			System.out.println("Please enter row_column, PASS, QUIT or EXIT: ");			
 			String answer = scanner.nextLine();
 			if (answer.toUpperCase().equals(Protocol.PASS)) {
 				System.out.println("Passing turn.");
@@ -26,7 +26,7 @@ public class HumanPlayer extends Player {
 				pass(true);
 				return new Move(Protocol.PASS);
 			} else if (answer.toUpperCase().equals(Protocol.QUIT)) {
-				System.out.println("Terminate game.");
+				System.out.println("Terminating game.");
 				return new Move(Protocol.QUIT);
 			} else if (isValidAnswer(answer, board)) {	
 				pass(false);

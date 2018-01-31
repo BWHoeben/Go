@@ -14,7 +14,7 @@ public class Tests {
 
 	private ActualBoard board;
 	private GoGUIIntegrator gogui;
-	private int dimension = 19;
+	private int dimension = 7;
 	
 	@Before
 	public void setUp() {
@@ -46,7 +46,7 @@ public class Tests {
 		return this.board.getScore().get(colour);
 	}
 	
-	@Test
+	//@Test
 	public void testScoring() {
 		processGui(38, Colour.BLACK);
 		processGui(39, Colour.BLACK);
@@ -109,5 +109,21 @@ public class Tests {
 		processGui(12, Colour.WHITE);
 		
 		assertEquals(getScore(Colour.WHITE), 19 * 19);
+	}
+	
+	@Test
+	public void Test2() {
+		processGui(7, Colour.BLACK);
+		
+		processGui(32, Colour.WHITE);
+		processGui(33, Colour.BLACK);
+		processGui(39, Colour.BLACK);
+		
+		try {
+			Thread.sleep(20*1000);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 }

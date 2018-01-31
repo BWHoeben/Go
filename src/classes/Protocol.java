@@ -37,6 +37,7 @@ public class Protocol {
 	public static final String NAMETAKEN = "NAMETAKEN";
 	public static final String INCOMPATIBLEPROTOCOL = "INCOMPATIBLEPROTOCOL";
 	public static final String OTHER = "OTHER";
+	public static final String EXIT = "EXIT";
 	
 	public Protocol() {
 		

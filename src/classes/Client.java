@@ -658,7 +658,7 @@ public class Client extends Thread {
 			}
 		} else {
 			clientColour = Colour.BLACK;
-			boardSize = 19;
+			boardSize = 15;
 		}
 		send(Protocol.SETTINGS + Protocol.DELIMITER1 + clientColour.toString() + 
 				Protocol.DELIMITER1 + boardSize + Protocol.DELIMITER1 + Protocol.COMMAND_END);
