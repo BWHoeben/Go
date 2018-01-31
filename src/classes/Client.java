@@ -49,13 +49,13 @@ public class Client extends Thread {
 	public static void main(String[] args) 
 			throws InvalidHostException, NoValidPortException, InvalidCommandException {
 
-		//askForInput();
+		askForInput();
 
-		try {
-			useDefaultInput();
-		} catch (UnknownHostException e) {
-			e.printStackTrace();
-		}
+		//try {
+		//	useDefaultInput();
+		//} catch (UnknownHostException e) {
+		//	e.printStackTrace();
+		//}
 
 	}
 
@@ -182,9 +182,9 @@ public class Client extends Thread {
 		}
 		print("Connection succesfull!");
 
-		//this.opponents = askForOpponents();
+		this.opponents = askForOpponents();
 
-		this.opponents = 1;
+		//this.opponents = 1;
 
 		this.name = name;
 		try {
@@ -413,7 +413,6 @@ public class Client extends Thread {
 			if (playerToMakeMove.getName().equals(this.clientPlayer.getName()) 
 					&& !opponentDoublePass) { 
 				Move moveToMake = playerToMakeMove.determineMove(board);
-
 				if (moveToMake.getQuit()) {
 					send(Protocol.QUIT + Protocol.DELIMITER1 + Protocol.COMMAND_END);
 				} else if (moveToMake.getExit()) {	
@@ -660,7 +659,7 @@ public class Client extends Thread {
 			}
 		} else {
 			clientColour = Colour.BLACK;
-			boardSize = 10;
+			boardSize = 19;
 		}
 		send(Protocol.SETTINGS + Protocol.DELIMITER1 + clientColour.toString() + 
 				Protocol.DELIMITER1 + boardSize + Protocol.DELIMITER1 + Protocol.COMMAND_END);

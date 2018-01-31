@@ -33,7 +33,7 @@ public class ActualBoard extends Board {
 		}
 
 		score = new HashMap<Colour, Integer>();
-		boardSituations = new ArrayList<Colour[]>();
+		boardSituations = new ArrayList<char[]>();
 
 
 		// Black is the first one to move, so white is set as lastMove by default
@@ -44,7 +44,7 @@ public class ActualBoard extends Board {
 			score.put(colourToCalculate, 0);
 			colourToCalculate = colourToCalculate.next(this.numberOfPlayers);
 		}
-		updateGroups();
+		updateGroups(Colour.BLACK);
 	}
 
 	// if a group is captured (it has no more liberties),

@@ -1,6 +1,7 @@
 package classes;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -19,7 +20,7 @@ public abstract class Board {
 	protected Set<Group> groups;
 	protected Colour lastMove;
 	protected Map<Colour, Integer> score;
-	protected List<Colour[]> boardSituations; 
+	protected List<char[]> boardSituations; 
 	protected int numberOfPlayers;
 
 	public Board(int dimension, int numberOfPlayersArg) {
@@ -44,16 +45,16 @@ public abstract class Board {
 
 	public void copyBoard() {
 		// back-up the current situations
-		boardSituations.add(currentSituation());
+		this.boardSituations.add(currentSituation());
 	}
 
 
 
-	public Colour[] currentSituation() {
+	public char[] currentSituation() {
 		// make a representation of the current situation
-		Colour[] arrayToReturn = new Colour[dimension * dimension];
+		char[] arrayToReturn = new char[dimension * dimension];
 		for (int i = 0; i < intersections.size(); i++) {
-			arrayToReturn[i] = intersections.get(i).getColour();
+			arrayToReturn[i] = intersections.get(i).getColour().toChar();
 		}
 		return arrayToReturn;
 	}
@@ -61,11 +62,11 @@ public abstract class Board {
 	// indicates whether this situation has already occurred
 	public boolean replicatesPreviousBoard(int index, Colour colour) {
 		// would this move replicate a previous board situation?
-		Colour[] currentSituation = currentSituation();
+		char[] currentSituation = currentSituation();
 		//update with hypothetical move
-		currentSituation[index] = colour;
-		for (Colour[] array : boardSituations) {
-			if (array.equals(currentSituation)) {
+		currentSituation[index] = colour.toChar();
+		for (char[] array : boardSituations) {
+			if (Arrays.equals(array, currentSituation)) {
 				System.out.println("Not an unique situation");
 				return true;
 			}
@@ -75,11 +76,12 @@ public abstract class Board {
 
 	public void setIntersection(Move move) throws InvalidMoveException {
 		// make a move, provided the move is valid
-		if (isValidMove(move)) {
+		if (isValidMove(move)) {		
 			Intersection intersect = intersections.get(move.getIndex());
-			intersect.setColour(move.getColour());	
-			updateGroups();
-			updateScore();
+			intersect.setColour(move.getColour());
+			copyBoard();
+			updateGroups(move.getColour());
+			updateScore();	
 			copyBoard();
 			this.lastMove = move.getColour();	
 		} else {
@@ -178,7 +180,7 @@ public abstract class Board {
 	// update all the groups
 	// groups are defined as orthogonally adjacent intersections with the same colour,
 	// thus this also includes empty area's
-	public void updateGroups() {
+	public void updateGroups(Colour colour) {
 		resetIntersections();
 		this.groups = new HashSet<Group>();	
 		for (int i = 0; i < this.intersections.size(); i++) {
@@ -232,14 +234,14 @@ public abstract class Board {
 		resetIntersections();
 		// are there any groups without liberties?
 		// first check the intersection of the player who didn't commit the last move
-		Colour colourToCheck = lastMove.next(this.numberOfPlayers);
+		Colour colourToCheck = colour.next(this.numberOfPlayers);
 
 		for (int i = 0; i < numberOfPlayers; i++) {
 			for (Group group : groups) {
 				if (group.getColour().equals(colourToCheck)) {
 					if (!hasLiberties(group)) {
 						setGroupToEmpty(group);
-						updateGroups();
+						updateGroups(colour);
 					}
 				}
 			}
@@ -523,9 +525,11 @@ public abstract class Board {
 	public int scoreDiff(Colour colour) {
 		int myCurrentScore = score.get(colour);
 		int myOpponentsScore = 0;
+		Colour colourToEvaluate = colour.next(numberOfPlayers);
 		for (int i = 0; i < numberOfPlayers; i++) {
-			Colour colourToEvaluate = colour.next(numberOfPlayers);
-			myOpponentsScore = myOpponentsScore + score.get(colourToEvaluate);
+			if (!colour.equals(colourToEvaluate)) {			
+			myOpponentsScore = myOpponentsScore + score.get(colourToEvaluate);}
+			colourToEvaluate = colourToEvaluate.next(numberOfPlayers);
 		}
 		return myCurrentScore - myOpponentsScore;
 	}
@@ -552,7 +556,7 @@ public abstract class Board {
 		return true;
 	}
 	
-	public MoveScoreCombination calculateScoreDiffs(Colour colour) {		
+	public MoveScoreCombination calculateScoreDiffs1(Colour colour) {		
 		int maxScore = -10000;
 		
 		Set<Move> setToReturn = new HashSet<Move>();
@@ -573,10 +577,12 @@ public abstract class Board {
 		for (Integer move : movesToEval) {
 			Move moveToMake = new Move(move, this.dimension, colour);
 			
+			ArrayList<char[]> bS = new ArrayList<char[]>(this.boardSituations);
+			
 			// create new hypothetical board
 			HypotheticalBoard hypoBoard = new HypotheticalBoard(this.currentSituation(), 
 					this.dimension, this.numberOfPlayers, 
-					this.boardSituations, this.lastMove, this.score);
+					bS, this.lastMove, this.score);
 
 			// make hypothetical move
 			try {

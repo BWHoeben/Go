@@ -8,6 +8,26 @@ public enum Colour {
 	public Colour first() {
 		return BLACK;
 	}
+	
+	public char toChar() {
+		switch (this) {
+			case BLACK : return 'B';
+			case WHITE : return 'W';
+			case ORANGE : return 'O';
+			case PINK : return 'P';
+			default : return 'E';
+		}
+	}
+	
+	public static Colour useChar(char c) {
+		switch (c) {
+			case 'B' : return BLACK;
+			case 'W' : return WHITE;
+			case 'O' : return ORANGE;
+			case 'P' : return PINK;
+			default : return EMPTY;
+		}
+	}
 
 	public Colour next(int numberOfPlayers) {
 		if (numberOfPlayers == 2) {

@@ -1,6 +1,7 @@
 package classes;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Random;
@@ -23,7 +24,7 @@ public class SmarterStrategy implements Strategy {
 		}
 		
 		// get all the moves that yield the best leap in scores
-		MoveScoreCombination msc = board.calculateScoreDiffs(colour);
+		MoveScoreCombination msc = board.calculateScoreDiffs1(colour);
 		
 		//System.out.println("Colour: " + colour.toString());
 		Set<Move> moves = msc.getMoves();
@@ -54,18 +55,18 @@ public class SmarterStrategy implements Strategy {
 	
 	public Set<Move> getTheBestOfTheBest(Set<Move> moves, ActualBoard board, Colour colour) {
 		Set<MoveScoreCombination> mscs = new HashSet<MoveScoreCombination>();
-		
 		for (Move move : moves) {
+			ArrayList<char[]> bS = new ArrayList<char[]>(board.boardSituations);
 			HypotheticalBoard hypoBoard = new 
 					HypotheticalBoard(board.currentSituation(), board.getDimension(), 
-							board.numberOfPlayers, board.boardSituations, 
+							board.numberOfPlayers, bS, 
 							board.lastMove, board.score);
 			try {
 				hypoBoard.setIntersection(move);
 			} catch (InvalidMoveException e) {
 				e.printStackTrace();
 			}
-			MoveScoreCombination msc = hypoBoard.calculateScoreDiffs(colour);
+			MoveScoreCombination msc = hypoBoard.calculateScoreDiffs2(colour);
 			msc.setPreviousMove(move);
 			mscs.add(msc);
 		}

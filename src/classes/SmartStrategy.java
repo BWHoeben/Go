@@ -8,7 +8,7 @@ public class SmartStrategy implements Strategy {
 	@Override
 	public Move determineMoveUsingStrategy(ActualBoard board, Colour colour) {
 		// get all the moves that yield the best leap in scores
-		MoveScoreCombination msc = board.calculateScoreDiffs(colour);
+		MoveScoreCombination msc = board.calculateScoreDiffs1(colour);
 		Set<Move> moves = msc.getMoves();
 		if (moves.size() == 1) {
 			return moves.toArray(new Move[1])[0];
