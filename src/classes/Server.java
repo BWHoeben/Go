@@ -19,7 +19,6 @@ import errors.InvalidMoveException;
 import errors.InvalidNumberOfArgumentsException;
 import errors.NoValidPortException;
 import errors.NotAnIntException;
-import errors.NotYetImplementedException;
 
 public class Server extends Thread {
 	private Set<HashSet<ClientHandler>> clientsInGame;

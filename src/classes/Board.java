@@ -528,7 +528,8 @@ public abstract class Board {
 		Colour colourToEvaluate = colour.next(numberOfPlayers);
 		for (int i = 0; i < numberOfPlayers; i++) {
 			if (!colour.equals(colourToEvaluate)) {			
-			myOpponentsScore = myOpponentsScore + score.get(colourToEvaluate);}
+				myOpponentsScore = myOpponentsScore + score.get(colourToEvaluate); 
+			}
 			colourToEvaluate = colourToEvaluate.next(numberOfPlayers);
 		}
 		return myCurrentScore - myOpponentsScore;
