@@ -28,6 +28,9 @@ public class HumanPlayer extends Player {
 			} else if (answer.toUpperCase().equals(Protocol.QUIT)) {
 				System.out.println("Terminating game.");
 				return new Move(Protocol.QUIT);
+			} else if (answer.toUpperCase().equals(Protocol.EXIT)) {	
+				System.out.println("Disconnecting from server");
+				return new Move(Protocol.EXIT);
 			} else if (isValidAnswer(answer, board)) {	
 				pass(false);
 				try {

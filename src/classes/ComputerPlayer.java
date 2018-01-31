@@ -11,12 +11,7 @@ public class ComputerPlayer extends Player implements Strategy {
 	
 	public ComputerPlayer(String name, Colour colour) {
 		super(name, colour);
-		if (colour.equals(Colour.WHITE)) {
-			this.strategy = new SmarterStrategy();
-			System.out.println("USING SMART STRATEGY");
-		} else {
-			this.strategy = new RandomStrategy();
-		}
+		this.strategy = new SmarterStrategy();
 	}
 	
 	public Move determineMove(ActualBoard board) {

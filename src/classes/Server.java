@@ -195,6 +195,8 @@ public class Server extends Thread {
 				processMove(split, msg, handler);
 			} else if (split[0].equals(Protocol.QUIT)) {
 				handleQuit(handler);
+			} else if (split[0].equals(Protocol.EXIT))	 {
+				handleExit(handler);
 			} else if (split[0].equals(Protocol.TIMEOUT)) {
 				endGame(handler, Protocol.TIMEOUT);
 			} else if (split[0].equals(Protocol.REQUESTGAME)) {
@@ -231,17 +233,13 @@ public class Server extends Thread {
 
 	public void handleQuit(ClientHandler handler) {
 		print(handler.getClientName() + " has quit");
-		Set<ClientHandler> clientsInMyGame = getClientsInMyGame(handler);
-		if (clientsInMyGame.size() == 2) {
-			endGame(handler, Protocol.ABORTED);
-		} else {
-			try {
-				throw new NotYetImplementedException("not yet implemented");
-			} catch (NotYetImplementedException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}
+		endGame(handler, Protocol.ABORTED);
+	}
+	
+	public void handleExit(ClientHandler handler) {
+		print(handler.getClientName() + " has left the server");
+		endGame(handler, Protocol.ABORTED);
+		removeHandler(handler);
 	}
 
 	public void endGame(ClientHandler handler, String reason) {
@@ -320,7 +318,6 @@ public class Server extends Thread {
 				clientBoardCombinations.remove(handlerToClean);
 			}
 		}
-		removeHandler(handler);
 	}
 
 	public ClientHandler getClientWithHighestScore(Map<ClientHandler, Integer> clientScores) {
@@ -355,6 +352,9 @@ public class Server extends Thread {
 				handler.incrementNumberOfMoves();
 				handler.pass(false);
 				try {
+					System.out.println(split[1]);
+					System.out.println(board.getDimension());
+					System.out.println(handler.getColour());
 					move = new Move(split[1], board.getDimension(), handler.getColour());
 				} catch (InvalidCoordinateException e) {
 					e.printStackTrace();

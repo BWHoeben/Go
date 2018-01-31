@@ -416,6 +416,8 @@ public class Client extends Thread {
 
 				if (moveToMake.getQuit()) {
 					send(Protocol.QUIT + Protocol.DELIMITER1 + Protocol.COMMAND_END);
+				} else if (moveToMake.getExit()) {	
+					send(Protocol.EXIT + Protocol.DELIMITER1 + Protocol.COMMAND_END);
 				} else {
 					String move = null;
 					if (moveToMake.getPass()) {
@@ -647,18 +649,18 @@ public class Client extends Thread {
 			while (true) {
 				try {
 					this.boardSize = Integer.parseInt(SCANNER.nextLine());
-					if (this.boardSize > 1 && this.boardSize < 100) {
+					if (this.boardSize > 4 && this.boardSize < 20) {
 						break;
 					}
-					print("Board size should be a integer bigger than one and"
-							+ "smaller than hundred. Please try again.");
+					print("Board size should be a integer bigger than four and"
+							+ "smaller than twenty. Please try again.");
 				} catch (NumberFormatException e) {
 					print("You did not enter a valid integer. Please try again.");
 				}
 			}
 		} else {
 			clientColour = Colour.BLACK;
-			boardSize = 15;
+			boardSize = 10;
 		}
 		send(Protocol.SETTINGS + Protocol.DELIMITER1 + clientColour.toString() + 
 				Protocol.DELIMITER1 + boardSize + Protocol.DELIMITER1 + Protocol.COMMAND_END);

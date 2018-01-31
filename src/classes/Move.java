@@ -12,6 +12,7 @@ public class Move {
 	private int row;
 	private boolean hasPassed = false;
 	private boolean hasQuit = false;
+	private boolean hasExit = false;
 
 	public Move(String moveArg, int boardSizeArg, Colour colourArg) 
 			throws InvalidCoordinateException {
@@ -30,11 +31,13 @@ public class Move {
 		this.move = row + Protocol.DELIMITER2 + col;
 	}
 	
-	public Move(String passOrQuit) {
-		if (passOrQuit.equals(Protocol.PASS)) {
+	public Move(String passQuitExit) {
+		if (passQuitExit.equals(Protocol.PASS)) {
 			hasPassed = true;
-		} else if (passOrQuit.equals(Protocol.QUIT)) {
+		} else if (passQuitExit.equals(Protocol.QUIT)) {
 			hasQuit = true;
+		} else if (passQuitExit.equals(Protocol.EXIT)) {
+			hasExit = true;
 		}
 	}
 	
@@ -44,6 +47,10 @@ public class Move {
 	
 	public boolean getQuit() {
 		return hasQuit;
+	}
+	
+	public boolean getExit() {
+		return hasExit;
 	}
 
 	public int getIndex() {

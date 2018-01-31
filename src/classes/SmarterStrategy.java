@@ -1,6 +1,8 @@
 package classes;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Random;
 import java.util.Set;
 
@@ -8,12 +10,28 @@ import errors.InvalidMoveException;
 
 public class SmarterStrategy implements Strategy {
 
+	private boolean firstMove = true;
+	
 	@Override
 	public Move determineMoveUsingStrategy(ActualBoard board, Colour colour) {
 		
+		if (firstMove) {
+			firstMove = false;
+			if (colour.equals(Colour.BLACK)) {
+				return new Move(1, board.dimension, colour);
+			}
+		}
+		
 		// get all the moves that yield the best leap in scores
 		MoveScoreCombination msc = board.calculateScoreDiffs(colour);
+		
+		//System.out.println("Colour: " + colour.toString());
 		Set<Move> moves = msc.getMoves();
+		
+		//for (Move move : moves) {
+		//	//System.out.println("moves to eval: " + move.toString());
+		//}
+		
 		if (moves.size() == 1) {
 			return moves.toArray(new Move[1])[0];
 		} else {
@@ -25,6 +43,7 @@ public class SmarterStrategy implements Strategy {
 		int i = 0;
 		for (Move obj : moves) {
 			if (i == item) {
+				//System.out.println("Object is: " + obj.toString());
 				return obj;
 			}
 			i++;
@@ -35,6 +54,7 @@ public class SmarterStrategy implements Strategy {
 	
 	public Set<Move> getTheBestOfTheBest(Set<Move> moves, ActualBoard board, Colour colour) {
 		Set<MoveScoreCombination> mscs = new HashSet<MoveScoreCombination>();
+		
 		for (Move move : moves) {
 			HypotheticalBoard hypoBoard = new 
 					HypotheticalBoard(board.currentSituation(), board.getDimension(), 
