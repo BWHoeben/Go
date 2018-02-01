@@ -295,6 +295,22 @@ public abstract class Board {
 			return true;
 		}
 	}
+	
+	public boolean isSuicide(Move move) {
+		Intersection intersect = intersections.get(move.getIndex());
+		Set<Intersection> adjacentIntersects = adjacentIntersectionsIntersect(intersect);
+		Set<Intersection> emptyIntersects = 
+				intersectionsWithColour(adjacentIntersects, Colour.EMPTY);
+		Set<Intersection> ownIntersects = 
+				intersectionsWithColour(adjacentIntersects, move.getColour());
+		
+		
+		if (emptyIntersects.size() + ownIntersects.size() == 0) {
+			return true;
+		} else {
+			return false;
+		}
+	}
 
 	// if a group is captured (it has no more liberties),
 	// the stones are removed. I.e. the intersections are set to empty

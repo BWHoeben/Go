@@ -129,7 +129,7 @@ public class Server extends Thread {
 		ClientHandler firstClient = getFirstClient(matchedClients);
 		this.clientsInGame.add(matchedClients);
 		firstClient.sendMessageToClient(Protocol.START + Protocol.DELIMITER1 +
-				matchedClients.size() + Protocol.DELIMITER1 + Protocol.COMMAND_END);
+				matchedClients.size() + Protocol.COMMAND_END);
 	}
 
 	public ClientHandler getFirstClient(HashSet<ClientHandler> clients) {
@@ -200,18 +200,20 @@ public class Server extends Thread {
 				endGame(handler, Protocol.TIMEOUT);
 			} else if (split[0].equals(Protocol.REQUESTGAME)) {
 				handleRequest(split, handler);
-			} else {
+			} else if (!msg.equals("")) {
 				print("Recieved unknown command");
 				handler.sendMessageToClient(Protocol.ERROR + Protocol.DELIMITER1 
-						+ Protocol.UNKNOWN + Protocol.DELIMITER1 + Protocol.COMMAND_END);
+						+ Protocol.UNKNOWN + Protocol.COMMAND_END);
 			}
 		}
 	}
 
 	public void handleRequest(String[] split, ClientHandler handler) {
+		int requestedNumberOfOpponents = Integer.parseInt(split[1]) - 1;
+		
 		print(String.format("%s requested a game with %s opponents", 
-				handler.getClientName(), split[1]));
-		int requestedNumberOfOpponents = Integer.parseInt(split[1]);
+				handler.getClientName(), requestedNumberOfOpponents));
+		
 		match(handler, requestedNumberOfOpponents);
 	}
 
@@ -263,9 +265,14 @@ public class Server extends Thread {
 				ClientHandler clientWithMaxScore = getClientWithHighestScore(clientScores);
 				System.out.println(clientWithMaxScore.getColour().toString() 
 						+ " Score" + clientScores.get(clientWithMaxScore));
+				if (i == clientsInMyGame.size() - 1) { 
 				stringToSend = stringToSend + clientWithMaxScore.getClientName() 
+					+ Protocol.DELIMITER1 + clientScores.get(clientWithMaxScore); 
+				} else {
+					stringToSend = stringToSend + clientWithMaxScore.getClientName() 
 					+ Protocol.DELIMITER1 + clientScores.get(clientWithMaxScore)
-					+ Protocol.DELIMITER1;
+					+ Protocol.DELIMITER1; 		
+				}
 				clientScores.remove(clientWithMaxScore);
 
 			}
@@ -330,6 +337,16 @@ public class Server extends Thread {
 		}
 		return maxClient;
 	}
+	
+	public boolean allClientsPassed(ClientHandler handler) {
+		Set<ClientHandler> clientsInMyGame = getClientsInMyGame(handler);
+		for (ClientHandler client : clientsInMyGame) {
+			if (!client.passedOnPreviousTurn()) {
+				return false;
+			}
+		}
+		return true;
+	}
 
 	// CASE MOVE row_column
 	public void processMove(String[] split, String msg, ClientHandler handler) {
@@ -340,14 +357,13 @@ public class Server extends Thread {
 			Move move = null;
 			if (split[1].equals(Protocol.PASS)) {
 				print(handler.getClientName() + " passed.");
-				// did this clients also pass last time?
-				if (handler.passedOnPreviousTurn()) {
-					print(handler.getClientName() + 
-							"also passed during his/her previous turn. Terminating game.");
+				handler.pass(true);
+				// did all the other clients pass on their previous turn?
+				
+				if (allClientsPassed(handler)) {
 					handleQuit(handler);
 				}
-				handler.pass(true);
-			} else {
+				} else {
 				handler.incrementNumberOfMoves();
 				handler.pass(false);
 				try {
@@ -383,7 +399,7 @@ public class Server extends Thread {
 		} catch (InvalidMoveException e) {
 			print("That's not a valid move!");
 			handler.sendMessageToClient(Protocol.ERROR + Protocol.DELIMITER1 
-					+ Protocol.INVALID + Protocol.DELIMITER1 + Protocol.COMMAND_END);
+					+ Protocol.INVALID + Protocol.COMMAND_END);
 		}
 		return board.gameOver();
 	}
@@ -415,7 +431,7 @@ public class Server extends Thread {
 			String stringToSend = Protocol.TURN + Protocol.DELIMITER1 + 
 					clientWhoMadeMove.getClientName() +
 					Protocol.DELIMITER1 + moveAsString + Protocol.DELIMITER1 +
-					nextClient.getClientName() + Protocol.DELIMITER1 + Protocol.COMMAND_END;
+					nextClient.getClientName() + Protocol.COMMAND_END;
 
 			broadcastToSetOfClients(stringToSend, clientsInThisGame);
 		}
@@ -483,7 +499,11 @@ public class Server extends Thread {
 
 		for (int i = 0; i < clientsInMyGame.size(); i++) {
 			ClientHandler clientToAdd = clientColourCombinations.get(lastColour);
-			stringToSend = stringToSend + clientToAdd.getClientName() + Protocol.DELIMITER1;
+			if (i == clientsInMyGame.size() - 1) {
+				stringToSend = stringToSend + clientToAdd.getClientName();
+			} else {
+				stringToSend = stringToSend + clientToAdd.getClientName() + Protocol.DELIMITER1;
+			}
 			lastColour = lastColour.next(clientsInMyGame.size());			
 		}
 

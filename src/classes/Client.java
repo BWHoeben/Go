@@ -208,20 +208,21 @@ public class Client extends Thread {
 		} else {
 			multi = 0;
 		}
-		
+
 		send(Protocol.NAME + Protocol.DELIMITER1 + name + Protocol.DELIMITER1 +
 				Protocol.VERSION + Protocol.DELIMITER1 + Protocol.VERSIONNUMBER +
 				Protocol.DELIMITER1 + Protocol.EXTENSIONS + Protocol.DELIMITER1 +
 				0 + Protocol.DELIMITER1 	+ 0 + Protocol.DELIMITER1 + 0 +
 				Protocol.DELIMITER1 + 0 + Protocol.DELIMITER1 + multi +
 				Protocol.DELIMITER1 + 0 + Protocol.DELIMITER1 
-				+ 0 + Protocol.DELIMITER1 + Protocol.COMMAND_END);
+				+ 0 + Protocol.COMMAND_END);
 		sendRequest(this.opponents);
 	}
 
 	public void sendRequest(int numberOfopponents) {
+		numberOfopponents = numberOfopponents + 1;
 		send(Protocol.REQUESTGAME + Protocol.DELIMITER1 + numberOfopponents + 
-				Protocol.DELIMITER1 + Protocol.RANDOM + Protocol.DELIMITER1 + Protocol.COMMAND_END);
+				Protocol.DELIMITER1 + Protocol.RANDOM + Protocol.COMMAND_END);
 	}
 
 	public void run() {
@@ -244,7 +245,8 @@ public class Client extends Thread {
 		}
 	}
 	public void handleMessage(String msg) throws InvalidCommandException, NotAnIntException {
-		String[] splitString = trimEndCommand(msg.split("\\" + Protocol.DELIMITER1), msg);
+		String[] splitString = msg.split("\\" + Protocol.DELIMITER1); 
+		//trimEndCommand(msg.split("\\" + Protocol.DELIMITER1), msg);
 
 		if (splitString[0].equals(Protocol.START)) {
 			handleMessageStart(splitString, msg);
@@ -254,10 +256,16 @@ public class Client extends Thread {
 			handleMessageEndGame(splitString, msg);
 		} else if (splitString[0].equals(Protocol.ERROR))	 {
 			handleMessageError(splitString, msg);
-		} else {
-			throw new InvalidCommandException(String.format(
-					"Server provided unkown arguments. Recieved message: %s", msg));
-		}
+		} else if (splitString[0].equals(Protocol.NAME)) {
+			handleMessageName(splitString, msg);
+		} //else {
+		//throw new InvalidCommandException(String.format(
+		//		"Server provided unkown arguments. Recieved message: %s", msg));
+		//}
+	}
+
+	public void handleMessageName(String[] splitString, String msg) {
+		print("Connected to: " + splitString[1]);
 	}
 
 	public void handleMessageError(String[] split, String msg) {
@@ -266,8 +274,8 @@ public class Client extends Thread {
 			shutdown();
 		} else {
 			print("Recieved error message from server. Message was: " + msg);
-			print("Honestly, I don't really care for this server. Bye.");
-			shutdown();
+			//print("Honestly, I don't really care for this server. Bye.");
+			//shutdown();
 		}
 	}
 
@@ -383,18 +391,9 @@ public class Client extends Thread {
 
 			Player playerWhoJustHadATurn = getPlayer(split[1]);
 			Player playerToMakeMove = getPlayer(split[3]);
-			boolean opponentDoublePass = false;
 			// opponent passed
-			if (split[2].equals(Protocol.PASS) && !split[1].equals(clientPlayer.getName())) {
-				if (playerWhoJustHadATurn.getLastMoveWasPass()) {
-					print(playerWhoJustHadATurn.getName() + " passed two times in a row!");	
-					opponentDoublePass = true;
-				}
-				playerWhoJustHadATurn.pass(true);
-
-
-			} else if (!split[2].equals(Protocol.FIRST) 
-					&& !split[1].equals(clientPlayer.getName())) {
+			if (!split[2].equals(Protocol.FIRST) 
+					&& !split[1].equals(clientPlayer.getName()) && !split[2].equals(Protocol.PASS)) {
 				print("Processing opponents move");
 				playerWhoJustHadATurn.pass(false);
 				Move move;
@@ -410,13 +409,12 @@ public class Client extends Thread {
 				}
 			} 
 
-			if (playerToMakeMove.getName().equals(this.clientPlayer.getName()) 
-					&& !opponentDoublePass) { 
+			if (playerToMakeMove.getName().equals(this.clientPlayer.getName())) { 
 				Move moveToMake = playerToMakeMove.determineMove(board);
 				if (moveToMake.getQuit()) {
-					send(Protocol.QUIT + Protocol.DELIMITER1 + Protocol.COMMAND_END);
+					send(Protocol.QUIT + Protocol.COMMAND_END);
 				} else if (moveToMake.getExit()) {	
-					send(Protocol.EXIT + Protocol.DELIMITER1 + Protocol.COMMAND_END);
+					send(Protocol.EXIT + Protocol.COMMAND_END);
 				} else {
 					String move = null;
 					if (moveToMake.getPass()) {
@@ -434,7 +432,7 @@ public class Client extends Thread {
 						processMoveInGui(moveToMake);
 					}
 					send(Protocol.MOVE + Protocol.DELIMITER1 + move + 
-							Protocol.DELIMITER1 + Protocol.COMMAND_END);
+							Protocol.COMMAND_END);
 				}
 			} 
 		}
@@ -662,13 +660,13 @@ public class Client extends Thread {
 			boardSize = 19;
 		}
 		send(Protocol.SETTINGS + Protocol.DELIMITER1 + clientColour.toString() + 
-				Protocol.DELIMITER1 + boardSize + Protocol.DELIMITER1 + Protocol.COMMAND_END);
+				Protocol.DELIMITER1 + boardSize + Protocol.COMMAND_END);
 	} 
 	public void send(String msg) {
-		checkEndCommand(msg.split("\\" + Protocol.DELIMITER1), msg);
+		//checkEndCommand(msg.split("\\" + Protocol.DELIMITER1), msg);
 		try {
 			out.write(msg);
-			out.newLine();
+			//out.newLine();
 			out.flush();
 			print("Message sent");
 			print(msg);

@@ -19,7 +19,11 @@ public class SmartStrategy implements Strategy {
 		int i = 0;
 		for (Move obj : moves) {
 			if (i == item) {
-				return obj;
+				if (board.isSuicide(obj)) {
+					return new Move(Protocol.PASS);
+				} else {
+					return obj;
+				}
 			}
 			i++;
 		}

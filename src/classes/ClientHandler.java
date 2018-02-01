@@ -40,23 +40,23 @@ public class ClientHandler extends Thread {
 	public boolean isTurn() {
 		return turn;
 	}
-	
+
 	public void tookTurn() {
 		turn = false;
 	}
-	
+
 	public void getsTurn() {
 		turn = true;
 	}
-	
+
 	public int getNumber() {
 		return number;
 	}
-	
+
 	public void pass(boolean passed) {
 		this.lastMoveWasPass = passed;
 	}
-	
+
 	public boolean passedOnPreviousTurn() {
 		return lastMoveWasPass;
 	}
@@ -76,29 +76,34 @@ public class ClientHandler extends Thread {
 	 * be called immediately after the ClientHandler has been constructed.
 	 */
 	public void announce() throws IOException {
+		//NAME serverpiet VERSION 2 EXTENSIONS 0 0 1 1 0 0 0
+		sendMessageToClient(Protocol.NAME + Protocol.DELIMITER1 + "CelineDionneLover12" 
+				+ Protocol.DELIMITER1 
+				+ Protocol.VERSION + 
+				Protocol.DELIMITER1 + Protocol.VERSIONNUMBER +
+				Protocol.DELIMITER1 + Protocol.EXTENSIONS 
+				+ Protocol.DELIMITER1 + 0 
+				+ Protocol.DELIMITER1 + 0 + Protocol.DELIMITER1 + 0 + Protocol.DELIMITER1 + 0 
+				+ Protocol.DELIMITER1 + 0 + Protocol.DELIMITER1 + 0 +
+				Protocol.DELIMITER1 + 0 + Protocol.COMMAND_END);
 		String msg = in.readLine();
-		String[] split = msg.split("\\" + Protocol.DELIMITER1);
-		if (split[0].equals(Protocol.NAME)) {
-			this.clientName = split[1];
-			if (server.checkForSameName(this.clientName)) {
-				Server.print("Name already exists. Terminating connection.");
-				sendMessageToClient(Protocol.ERROR + Protocol.DELIMITER1 + 
-						Protocol.NAMETAKEN + Protocol.DELIMITER1 + Protocol.COMMAND_END);
-				shutdown();
-			}
-		}
-		if (!split[3].equals(Protocol.VERSIONNUMBER)) {
-			sendMessageToClient(Protocol.ERROR + Protocol.DELIMITER1 
-					+ Protocol.INCOMPATIBLEPROTOCOL + Protocol.DELIMITER1 + Protocol.COMMAND_END);
-		}
-		for (int i = 5; i < split.length - 1; i++) {
-			if (!split[i].equals("0")) {
-				try {
-					throw new NotYetImplementedException("Not yet implemented");
-				} catch (NotYetImplementedException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
+
+		if (msg == null) {
+			shutdown();
+		} else {
+			String[] split = msg.split("\\" + Protocol.DELIMITER1);
+			if (split[0].equals(Protocol.NAME)) {
+				this.clientName = split[1];
+				if (server.checkForSameName(this.clientName)) {
+					Server.print("Name already exists. Terminating connection.");
+					sendMessageToClient(Protocol.ERROR + Protocol.DELIMITER1 + 
+							Protocol.NAMETAKEN + Protocol.COMMAND_END);
+					shutdown();
 				}
+			}
+			if (!split[3].equals(Protocol.VERSIONNUMBER)) {
+				sendMessageToClient(Protocol.ERROR + Protocol.DELIMITER1 
+						+ Protocol.INCOMPATIBLEPROTOCOL + Protocol.COMMAND_END);
 			}
 		}
 	}
@@ -162,7 +167,7 @@ public class ClientHandler extends Thread {
 				}
 			}, 
 					Protocol.TIMEOUTSECONDS * 1000 
-			);
+					);
 
 		}
 		try {
@@ -184,6 +189,7 @@ public class ClientHandler extends Thread {
 		if (run) {
 			server.endGame(this, Protocol.ABORTED);
 			Server.print("[" + clientName + " disconnected]");
+			server.removeHandler(this);
 			this.run = false;
 		}
 	}
@@ -191,15 +197,15 @@ public class ClientHandler extends Thread {
 	public String getClientName() {
 		return clientName;
 	}
-	
+
 	public int movesPerformed() {
 		return movesPerformed;
 	}
-	
+
 	public void incrementNumberOfMoves() {
 		movesPerformed++;
 	}
-	
+
 	public void resetMoves() {
 		this.movesPerformed = 0;
 	}

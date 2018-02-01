@@ -1,7 +1,7 @@
 package classes;
 
 public class Protocol {
-	public static final String VERSIONNUMBER = "5000";
+	public static final String VERSIONNUMBER = "6";
 	public static final String VERSION = "VERSION";
 	public static final String NAME = "NAME";
 	public static final String EXTENSIONS = "EXTENSIONS";
@@ -19,7 +19,7 @@ public class Protocol {
 	public static final short DEFAULT_PORT = 5647;
 	public static final String DELIMITER1 = "$";
 	public static final String DELIMITER2 = "_";
-	public static final String COMMAND_END = "COMMAND_END";
+	public static final String COMMAND_END = "\n";
 	
 	public static final String START = "START";
 	

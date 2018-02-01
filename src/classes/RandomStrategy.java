@@ -11,7 +11,12 @@ public class RandomStrategy implements Strategy {
 		int i = 0;
 		for (int intersect : emptyIntersects) {
 			if (i == intersectToReturn) {
-				return new Move(intersect, board.getDimension(), colour);
+				Move move = new Move(intersect, board.getDimension(), colour);
+				if (board.isSuicide(move)) {
+					return new Move(Protocol.PASS);
+				} else {
+				return move;
+				}
 			}
 			i++;
 		}

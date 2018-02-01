@@ -42,11 +42,15 @@ public class SmarterStrategy implements Strategy {
 		int i = 0;
 		for (Move obj : moves) {
 			if (i == item) {
-				//System.out.println("Object is: " + obj.toString());
-				return obj;
+				if (board.isSuicide(obj)) {
+					return new Move(Protocol.PASS);
+				} else {
+					return obj;
+				}
 			}
 			i++;
 		}
+
 
 		return null;
 	}
