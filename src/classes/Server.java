@@ -1,6 +1,11 @@
 package classes;
 
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
@@ -11,6 +16,11 @@ import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
 import java.util.Vector;
+
+import javax.sound.midi.InvalidMidiDataException;
+import javax.sound.midi.MidiSystem;
+import javax.sound.midi.MidiUnavailableException;
+import javax.sound.midi.Sequencer;
 
 //import GUI.GoGUIIntegrator;
 import errors.InvalidColourException;
@@ -31,6 +41,8 @@ public class Server extends Thread {
 
 	public static void main(String[] args) 
 			throws InvalidNumberOfArgumentsException, NoValidPortException {
+
+
 		print("Starting server...");
 		Server server = new Server();
 		server.start();
@@ -38,6 +50,35 @@ public class Server extends Thread {
 
 	// Initialization of a new server
 	public Server() {
+
+		Sequencer sequencer;
+		try {
+			sequencer = MidiSystem.getSequencer();
+			// Opens the device, indicating that it should now acquire any
+			// system resources it requires and become operational.
+			sequencer.open();
+			// create a stream from a file
+			InputStream is = new BufferedInputStream(new FileInputStream(new File("TUBBELL1.mid")));
+			// Sets the current sequence on which the sequencer operates.
+			// The stream must point to MIDI file data.
+			sequencer.setSequence(is);
+			// Starts playback of the MIDI data in the currently loaded sequence.
+			sequencer.start();
+			System.out.println("Start midi");
+		} catch (MidiUnavailableException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (InvalidMidiDataException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+
 		// Scanner to get input from console 
 		Scanner scanner = new Scanner(System.in);
 
@@ -210,10 +251,10 @@ public class Server extends Thread {
 
 	public void handleRequest(String[] split, ClientHandler handler) {
 		int requestedNumberOfOpponents = Integer.parseInt(split[1]) - 1;
-		
+
 		print(String.format("%s requested a game with %s opponents", 
 				handler.getClientName(), requestedNumberOfOpponents));
-		
+
 		match(handler, requestedNumberOfOpponents);
 	}
 
@@ -236,7 +277,7 @@ public class Server extends Thread {
 		print(handler.getClientName() + " has quit");
 		endGame(handler, Protocol.ABORTED);
 	}
-	
+
 	public void handleExit(ClientHandler handler) {
 		print(handler.getClientName() + " has left the server");
 		endGame(handler, Protocol.ABORTED);
@@ -266,7 +307,7 @@ public class Server extends Thread {
 				System.out.println(clientWithMaxScore.getColour().toString() 
 						+ " Score" + clientScores.get(clientWithMaxScore));
 				if (i == clientsInMyGame.size() - 1) { 
-				stringToSend = stringToSend + clientWithMaxScore.getClientName() 
+					stringToSend = stringToSend + clientWithMaxScore.getClientName() 
 					+ Protocol.DELIMITER1 + clientScores.get(clientWithMaxScore); 
 				} else {
 					stringToSend = stringToSend + clientWithMaxScore.getClientName() 
@@ -290,7 +331,7 @@ public class Server extends Thread {
 						+ Protocol.TIMEOUT + Protocol.DELIMITER1;
 				for (ClientHandler handlerToAdd : clientsInMyGame) {
 					timeOutString = timeOutString + handlerToAdd.getClientName() 
-						+ Protocol.DELIMITER1 + 0 + Protocol.DELIMITER1;
+					+ Protocol.DELIMITER1 + 0 + Protocol.DELIMITER1;
 				}
 				timeOutString = 	timeOutString + Protocol.COMMAND_END;	
 				broadcastToSetOfClients(timeOutString, clientsInMyGame);
@@ -337,7 +378,7 @@ public class Server extends Thread {
 		}
 		return maxClient;
 	}
-	
+
 	public boolean allClientsPassed(ClientHandler handler) {
 		Set<ClientHandler> clientsInMyGame = getClientsInMyGame(handler);
 		for (ClientHandler client : clientsInMyGame) {
@@ -359,11 +400,11 @@ public class Server extends Thread {
 				print(handler.getClientName() + " passed.");
 				handler.pass(true);
 				// did all the other clients pass on their previous turn?
-				
+
 				if (allClientsPassed(handler)) {
 					handleQuit(handler);
 				}
-				} else {
+			} else {
 				handler.incrementNumberOfMoves();
 				handler.pass(false);
 				try {
