@@ -67,7 +67,6 @@ public abstract class Board {
 		currentSituation[index] = colour.toChar();
 		for (char[] array : boardSituations) {
 			if (Arrays.equals(array, currentSituation)) {
-				System.out.println("Not an unique situation");
 				return true;
 			}
 		}

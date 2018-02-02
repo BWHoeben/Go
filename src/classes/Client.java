@@ -61,24 +61,24 @@ public class Client extends Thread {
 
 	public static void askForInput() 
 			throws InvalidCommandException, InvalidHostException, NoValidPortException {
-		print("How do you want to play? 1 = human, 2 = computer");
-		try {
-			int answer = SCANNER.nextInt();
-			if (answer == 1) {
-				isHuman = true;
-				print("Playing as human.");
-			} else if (answer == 2) {
-				isHuman = false;
-				print("Playing as computer");
-			} else {
-				SCANNER.close();
-				throw new InvalidCommandException("Wrong input!");
-			}
-		} catch (NumberFormatException e) {
-			throw new InvalidCommandException("Wrong input!");
-		}
+		//print("How do you want to play? 1 = human, 2 = computer");
+		//try {
+		//	int answer = SCANNER.nextInt();
+		//	if (answer == 1) {
+		//		isHuman = true;
+		//		print("Playing as human.");
+		//	} else if (answer == 2) {
+		//		isHuman = false;
+		//		print("Playing as computer");
+		//	} else {
+		//		SCANNER.close();
+		//		throw new InvalidCommandException("Wrong input!");
+		//	}
+		//} catch (NumberFormatException e) {
+		//	throw new InvalidCommandException("Wrong input!");
+		//}
 
-		SCANNER.nextLine();
+		//SCANNER.nextLine();
 
 		print("Please provide name: ");
 		String name = SCANNER.nextLine();
@@ -97,15 +97,18 @@ public class Client extends Thread {
 				print("Invalid host, try again");
 			}
 		}
-		print("Please provide port: ");
-		String portString = SCANNER.nextLine();
-		try {
-			port = Integer.parseInt(portString);
-		} catch (NumberFormatException e) {
-			SCANNER.close();
-			throw new NoValidPortException("Not a valid port!");
-		}
+		//print("Please provide port: ");
+		//String portString = SCANNER.nextLine();
+		//try {
+		//	port = Integer.parseInt(portString);
+		//} catch (NumberFormatException e) {
+		//	SCANNER.close();
+		//	throw new NoValidPortException("Not a valid port!");
+		//}
 
+		print("Using default port: " + Protocol.DEFAULT_PORT);
+		port = Protocol.DEFAULT_PORT;
+		
 		Client client;
 		try {
 			client = new Client(name, host, port);
@@ -182,9 +185,9 @@ public class Client extends Thread {
 		}
 		print("Connection succesfull!");
 
-		this.opponents = askForOpponents();
+		//this.opponents = askForOpponents();
 
-		//this.opponents = 1;
+		this.opponents = 1;
 
 		this.name = name;
 		try {

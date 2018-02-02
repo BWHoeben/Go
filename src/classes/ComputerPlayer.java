@@ -12,9 +12,9 @@ public class ComputerPlayer extends Player implements Strategy {
 	public ComputerPlayer(String name, Colour colour) {
 		super(name, colour);
 		//if (colour.equals(Colour.BLACK)) {
-		//	this.strategy = new SmarterStrategy();
+			this.strategy = new SmarterStrategy(); 
 		//} else {
-			this.strategy = new RandomStrategy();
+		//	this.strategy = new SmartStrategy();
 		//}
 	}
 	
